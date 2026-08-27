@@ -66,6 +66,7 @@ button{cursor:pointer}
   width:100%;height:62px;margin-top:22px;border:0;border-radius:18px;background:linear-gradient(135deg,var(--purple-deep),var(--purple));
   color:white;font-size:13px;font-weight:900;letter-spacing:.12em
 }
+.primary:disabled{opacity:.55;cursor:default}
 .linkbtn{display:block;border:0;background:none;color:var(--purple-soft);margin:18px auto 0;font-size:13px}
 .feedback{min-height:20px;margin-top:16px;text-align:center;font-size:12px;color:var(--muted)}
 .feedback.error{color:#ff9ba6} .feedback.success{color:#92e7bd}
@@ -254,6 +255,15 @@ button{cursor:pointer}
       <button id="backBtn" class="linkbtn">Back to login</button>
       <div id="recoveryFeedback" class="feedback"></div>
     </div>
+    <div id="newPinState" class="hidden">
+      <div class="wordmark">AXIS</div><div class="copy">© 2026</div>
+      <div class="recovery-title">Choose a new PIN</div>
+      <div class="recovery-copy">Enter a new 4-digit PIN for your AXIS account.</div>
+      <div class="field"><label>New 4-digit PIN</label><input id="newPin" class="input" type="password" maxlength="4" inputmode="numeric" autocomplete="new-password"></div>
+      <div class="field"><label>Confirm PIN</label><input id="confirmPin" class="input" type="password" maxlength="4" inputmode="numeric" autocomplete="new-password"></div>
+      <button id="saveNewPinBtn" class="primary">SAVE NEW PIN</button>
+      <div id="newPinFeedback" class="feedback"></div>
+    </div>
   </div>
 </section>
 
@@ -356,10 +366,12 @@ const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 const LOGIN_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-login";
 const ADMIN_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-admin";
 const FORGOT_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-forgot-pin";
+const RESET_PIN_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-reset-pin";
 const PIN_WINDOW=30*24*60*60*1000, PIN_KEY="axis_pin_authenticated_at";
 
-const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});
+const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 let profile=null,session=null,counts={},timer=null,staff=[],editing=null;
+let recoveryMode=false;
 
 const apps=[
   {key:"appointments",name:"Appointments",icon:"📅",desc:"Appointment control",url:"https://autopact-blackburn.github.io/Blackburn-Appointment-Tracker/",field:"appointment_access"},
@@ -379,8 +391,32 @@ async function loadProfile(){
 }
 
 async function bootstrap(){
-  try{const {data}=await client.auth.getSession();if(!data.session||!pinFresh()){if(data.session)await client.auth.signOut();localStorage.removeItem(PIN_KEY);show(document.getElementById("loginView"));return}session=data.session;await loadProfile();await openAxis();}
-  catch(e){console.error(e);show(document.getElementById("loginView"))}
+  // Give Supabase a moment to consume any recovery tokens in the URL.
+  await new Promise(resolve => setTimeout(resolve, 80));
+
+  try{
+    const {data}=await client.auth.getSession();
+
+    if(recoveryMode){
+      session=data.session||session;
+      showRecoveryPinScreen();
+      return;
+    }
+
+    if(!data.session||!pinFresh()){
+      if(data.session) await client.auth.signOut();
+      localStorage.removeItem(PIN_KEY);
+      show(document.getElementById("loginView"));
+      return;
+    }
+
+    session=data.session;
+    await loadProfile();
+    await openAxis();
+  }catch(e){
+    console.error(e);
+    show(document.getElementById("loginView"));
+  }
 }
 
 async function doLogin(){
@@ -535,14 +571,112 @@ async function openInsights(){
 async function logout(){if(timer)clearInterval(timer);await client.auth.signOut();localStorage.removeItem(PIN_KEY);profile=null;session=null;closeAll();show(loginView)}
 function saveVcard(){const blob=new Blob([vcard()],{type:"text/vcard"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`${profile.first_name}_${profile.last_name}.vcf`;a.click();URL.revokeObjectURL(url)}
 
+
+function showRecoveryPinScreen(){
+  recoveryMode=true;
+  document.getElementById("loginState").classList.add("hidden");
+  document.getElementById("recoveryState").classList.add("hidden");
+  document.getElementById("newPinState").classList.remove("hidden");
+  show(document.getElementById("loginView"));
+  setTimeout(()=>document.getElementById("newPin").focus(),50);
+}
+
+async function saveRecoveredPin(){
+  const p1=document.getElementById("newPin").value.trim();
+  const p2=document.getElementById("confirmPin").value.trim();
+  const fb=document.getElementById("newPinFeedback");
+  const btn=document.getElementById("saveNewPinBtn");
+
+  if(!/^\d{4}$/.test(p1)){
+    feedback(fb,"PIN must be exactly 4 digits.","error");
+    return;
+  }
+  if(p1!==p2){
+    feedback(fb,"The two PINs do not match.","error");
+    return;
+  }
+
+  btn.disabled=true;
+  feedback(fb,"Updating PIN…");
+
+  try{
+    const {data}=await client.auth.getSession();
+    const accessToken=data.session?.access_token;
+
+    if(!accessToken){
+      throw new Error("Recovery session has expired. Request a new recovery link.");
+    }
+
+    const r=await fetch(RESET_PIN_ENDPOINT,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer "+accessToken
+      },
+      body:JSON.stringify({pin:p1})
+    });
+
+    let j={};
+    try{j=await r.json()}catch{}
+
+    if(!r.ok||!j.ok){
+      throw new Error(j.error||"Unable to reset PIN.");
+    }
+
+    feedback(fb,"PIN updated. Returning to AXIS login…","success");
+
+    localStorage.removeItem(PIN_KEY);
+    await client.auth.signOut();
+
+    // Remove recovery hash/query information from the visible URL.
+    try{
+      history.replaceState({},document.title,location.pathname);
+    }catch{}
+
+    recoveryMode=false;
+    session=null;
+    profile=null;
+
+    document.getElementById("newPin").value="";
+    document.getElementById("confirmPin").value="";
+
+    setTimeout(()=>{
+      document.getElementById("newPinState").classList.add("hidden");
+      document.getElementById("recoveryState").classList.add("hidden");
+      document.getElementById("loginState").classList.remove("hidden");
+      show(document.getElementById("loginView"));
+      feedback(
+        document.getElementById("loginFeedback"),
+        "PIN updated. Sign in with your new PIN.",
+        "success"
+      );
+    },700);
+
+  }catch(e){
+    feedback(fb,e?.message||"Unable to reset PIN.","error");
+  }finally{
+    btn.disabled=false;
+  }
+}
+
 async function forgot(){
   const email=recoveryEmail.value.trim();if(!email)return feedback(recoveryFeedback,"Enter your AXIS email.","error");
   try{const r=await fetch(FORGOT_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email})});if(r.status===404)throw new Error("PIN recovery backend is not deployed yet.");if(!r.ok)throw new Error("Unable to send recovery instructions.");feedback(recoveryFeedback,"If that email belongs to an active AXIS account, recovery instructions have been sent.","success")}catch(e){feedback(recoveryFeedback,e.message,"error")}
 }
 
+client.auth.onAuthStateChange((event,newSession)=>{
+  if(event==="PASSWORD_RECOVERY"){
+    recoveryMode=true;
+    session=newSession||session;
+    setTimeout(showRecoveryPinScreen,0);
+  }
+});
+
 loginBtn.onclick=doLogin;loginPin.onkeydown=e=>{if(e.key==="Enter")doLogin()};
 forgotBtn.onclick=()=>{recoveryEmail.value=loginEmail.value;loginState.classList.add("hidden");recoveryState.classList.remove("hidden")};
 backBtn.onclick=()=>{recoveryState.classList.add("hidden");loginState.classList.remove("hidden")};recoveryBtn.onclick=forgot;
+saveNewPinBtn.onclick=saveRecoveredPin;
+confirmPin.onkeydown=e=>{if(e.key==="Enter")saveRecoveredPin()};
 profileBtn.onclick=openProfile;closeProfile.onclick=closeAll;overlay.onclick=closeAll;saveContact.onclick=saveVcard;logoutBtn.onclick=logout;
 closeUsers.onclick=closeAll;staffSearch.oninput=e=>{const q=e.target.value.toLowerCase();renderStaff(staff.filter(p=>[p.first_name,p.last_name,p.email,p.position,p.department,p.role].some(v=>(v||"").toLowerCase().includes(q))))};
 closeEdit.onclick=()=>{editModal.classList.add("hidden");usersModal.classList.remove("hidden")};saveUser.onclick=saveEditing;resetPin.onclick=resetEditingPin;toggleActive.onclick=toggleEditingActive;
