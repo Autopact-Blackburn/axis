@@ -233,6 +233,29 @@ button{cursor:pointer}
 .bar > div{height:100%;background:linear-gradient(90deg,var(--purple-deep),var(--purple));border-radius:999px}
 
 
+
+/* Universal AXIS tile identities */
+.tile[data-app="league"],.mobile-tile[data-app="league"]{
+  border-color:rgba(181,158,255,.31)!important;
+  box-shadow:0 20px 60px rgba(141,107,255,.13),inset 4px 0 0 rgba(181,158,255,.72)!important
+}
+.tile[data-app="league"] .icon{border-color:rgba(181,158,255,.46);background:rgba(141,107,255,.12);box-shadow:0 0 28px rgba(141,107,255,.16)}
+.tile[data-app="qr"],.mobile-tile[data-app="qr"]{
+  border-color:rgba(89,196,255,.29)!important;
+  box-shadow:0 20px 60px rgba(89,196,255,.10),inset 4px 0 0 rgba(89,196,255,.68)!important
+}
+.tile[data-app="qr"] .icon{border-color:rgba(89,196,255,.43);background:rgba(89,196,255,.10);box-shadow:0 0 28px rgba(89,196,255,.14)}
+.tile[data-app="users"],.mobile-tile[data-app="users"]{
+  border-color:rgba(255,103,190,.28)!important;
+  box-shadow:0 20px 60px rgba(255,103,190,.10),inset 4px 0 0 rgba(255,103,190,.67)!important
+}
+.tile[data-app="users"] .icon{border-color:rgba(255,103,190,.42);background:rgba(255,103,190,.10);box-shadow:0 0 28px rgba(255,103,190,.14)}
+.tile[data-app="insights"],.mobile-tile[data-app="insights"]{
+  border-color:rgba(104,224,145,.28)!important;
+  box-shadow:0 20px 60px rgba(104,224,145,.10),inset 4px 0 0 rgba(104,224,145,.67)!important
+}
+.tile[data-app="insights"] .icon{border-color:rgba(104,224,145,.42);background:rgba(104,224,145,.10);box-shadow:0 0 28px rgba(104,224,145,.14)}
+
 /* AXIS V1 engagement layer */
 .tile[data-app]{isolation:isolate}
 .tile[data-app]:after{
@@ -931,8 +954,27 @@ body{display:grid;place-items:center;background:radial-gradient(circle at 50% 42
   }
 
   try{
-    const {data:{session:liveSession},error:sessionError}=await client.auth.getSession();
-    if(sessionError||!liveSession?.access_token) throw new Error("Your AXIS session has expired. Please sign in again.");
+    // SSO must use a freshly validated AXIS access token. A cached browser
+    // session can still render AXIS while the JWT itself has gone stale.
+    let liveSession=null;
+    const refreshed=await client.auth.refreshSession();
+    if(!refreshed.error&&refreshed.data?.session){
+      liveSession=refreshed.data.session;
+      session=liveSession;
+    }else{
+      const current=await client.auth.getSession();
+      liveSession=current.data?.session||null;
+    }
+
+    if(!liveSession?.access_token){
+      throw new Error("Your AXIS session has expired. Please sign in again.");
+    }
+
+    // Validate the token locally with Supabase before handing it to axis-sso-launch.
+    const validated=await client.auth.getUser(liveSession.access_token);
+    if(validated.error||!validated.data?.user){
+      throw new Error("Your AXIS session has expired. Please sign in again.");
+    }
 
     const r=await fetch(SSO_LAUNCH_ENDPOINT,{
       method:"POST",
@@ -974,17 +1016,17 @@ function renderTiles(){
     const m=document.createElement("a");m.className="mobile-tile";m.dataset.app=a.key;m.href=a.url;m.target="_blank";m.rel="noopener";m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong><small>${a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date")}</small></div><div class="badge ${counts[a.key]?"warn":"ok"}">${a.external?"↗":counts[a.key]||"✓"}</div>`;m.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);mob.appendChild(m);
   });
 
-  const league=document.createElement("button");league.className="tile league-tile";league.innerHTML=renderLeagueTileHtml();league.onclick=openLeague;grid.appendChild(league);
-  const lm=document.createElement("button");lm.className="mobile-tile";lm.innerHTML=`<div class="icon">🏁</div><div><strong>AXIS League</strong><small>${profile.role==="user"&&myLeague?`Your rank #${myLeague.rank} · ${scoreData.month} score`:"Monthly usage league"}</small></div><div class="badge ok">›</div>`;lm.onclick=openLeague;mob.appendChild(lm);
+  const league=document.createElement("button");league.className="tile league-tile";league.dataset.app="league";league.innerHTML=renderLeagueTileHtml();league.onclick=openLeague;grid.appendChild(league);
+  const lm=document.createElement("button");lm.className="mobile-tile";lm.dataset.app="league";lm.innerHTML=`<div class="icon">🏁</div><div><strong>AXIS League</strong><small>${profile.role==="user"&&myLeague?`Your rank #${myLeague.rank} · ${scoreData.month} score`:"Monthly usage league"}</small></div><div class="badge ok">›</div>`;lm.onclick=openLeague;mob.appendChild(lm);
 
-  const qr=document.createElement("button");qr.className="tile";qr.innerHTML=`<div class="tile-top"><div class="icon">▦</div><div class="badge ok">✓</div></div><div class="qr-tile-body"><div id="qrTilePreview" class="qr-preview"></div><div><h2>My QR</h2><p>${profile.first_name} ${profile.last_name}<br>${profile.position||"Contact card"}</p></div></div><div class="tile-bottom"><span>Ready to scan</span><strong>SHOW CARD</strong></div>`;qr.onclick=openProfile;grid.appendChild(qr);
-  const qm=document.createElement("button");qm.className="mobile-tile";qm.innerHTML=`<div class="icon">▦</div><div><strong>My QR</strong><small>Contact card</small></div><div class="badge ok">›</div>`;qm.onclick=openProfile;mob.appendChild(qm);
+  const qr=document.createElement("button");qr.className="tile";qr.dataset.app="qr";qr.innerHTML=`<div class="tile-top"><div class="icon">▦</div><div class="badge ok">✓</div></div><div class="qr-tile-body"><div id="qrTilePreview" class="qr-preview"></div><div><h2>My QR</h2><p>${profile.first_name} ${profile.last_name}<br>${profile.position||"Contact card"}</p></div></div><div class="tile-bottom"><span>Ready to scan</span><strong>SHOW CARD</strong></div>`;qr.onclick=openProfile;grid.appendChild(qr);
+  const qm=document.createElement("button");qm.className="mobile-tile";qm.dataset.app="qr";qm.innerHTML=`<div class="icon">▦</div><div><strong>My QR</strong><small>Contact card</small></div><div class="badge ok">›</div>`;qm.onclick=openProfile;mob.appendChild(qm);
   setTimeout(()=>buildQr(document.getElementById("qrTilePreview"),240,58),0);
 
   if(profile.role==="admin"){
-    const u=document.createElement("button");u.className="tile admin";u.innerHTML=tileHtml({key:"users",name:"User Management",icon:"👥",desc:"Staff access, PINs & permissions",action:"MANAGE"});u.onclick=openUsers;grid.appendChild(u);
-    const um=document.createElement("button");um.className="mobile-tile";um.innerHTML=`<div class="icon">👥</div><div><strong>User Management</strong><small>Staff access & PINs</small></div><div class="badge ok">›</div>`;um.onclick=openUsers;mob.appendChild(um);
-    const i=document.createElement("button");i.className="tile admin";i.innerHTML=`<div class="tile-top"><div class="icon">◫</div><div class="badge ok">LIVE</div></div><div><h2>AXIS Insights</h2><p>Logins, usage & adoption</p><div class="insight-mini"><div class="insight-mini-row"><span>Appointments</span><div class="insight-mini-bar"><i style="width:78%"></i></div><b>↗</b></div><div class="insight-mini-row"><span>Delivery</span><div class="insight-mini-bar"><i style="width:52%"></i></div><b>↗</b></div></div></div><div class="tile-bottom"><span>Admin reporting</span><strong>VIEW</strong></div>`;i.onclick=openInsights;grid.appendChild(i);
+    const u=document.createElement("button");u.className="tile admin";u.dataset.app="users";u.innerHTML=tileHtml({key:"users",name:"User Management",icon:"👥",desc:"Staff access, PINs & permissions",action:"MANAGE"});u.onclick=openUsers;grid.appendChild(u);
+    const um=document.createElement("button");um.className="mobile-tile";um.dataset.app="users";um.innerHTML=`<div class="icon">👥</div><div><strong>User Management</strong><small>Staff access & PINs</small></div><div class="badge ok">›</div>`;um.onclick=openUsers;mob.appendChild(um);
+    const i=document.createElement("button");i.className="tile admin";i.dataset.app="insights";i.innerHTML=`<div class="tile-top"><div class="icon">◫</div><div class="badge ok">LIVE</div></div><div><h2>AXIS Insights</h2><p>Logins, usage & adoption</p><div class="insight-mini"><div class="insight-mini-row"><span>Appointments</span><div class="insight-mini-bar"><i style="width:78%"></i></div><b>↗</b></div><div class="insight-mini-row"><span>Delivery</span><div class="insight-mini-bar"><i style="width:52%"></i></div><b>↗</b></div></div></div><div class="tile-bottom"><span>Admin reporting</span><strong>VIEW</strong></div>`;i.onclick=openInsights;grid.appendChild(i);
     const im=document.createElement("button");im.className="mobile-tile";im.innerHTML=`<div class="icon">◫</div><div><strong>AXIS Insights</strong><small>Usage & adoption</small></div><div class="badge ok">›</div>`;im.onclick=openInsights;mob.appendChild(im);
   }
   updateSummary();
