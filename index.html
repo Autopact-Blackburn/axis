@@ -43,8 +43,29 @@ button{cursor:pointer}
 .fade{animation:fade .23s ease both}
 @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
-.loading{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:var(--bg)}
-.loading span{font-size:20px;font-weight:900;letter-spacing:.52em;padding-left:.52em}
+.loading{position:fixed;inset:0;z-index:200;display:grid;place-items:center;background:
+  radial-gradient(circle at 50% 42%,rgba(141,107,255,.15),transparent 34%),
+  linear-gradient(145deg,var(--bg-deep),var(--bg) 48%,#17121d 100%);overflow:hidden}
+.axis-loader{display:grid;place-items:center;gap:18px;text-align:center}
+.axis-loader-word{display:flex;gap:.28em;font-size:clamp(34px,6vw,68px);font-weight:950;letter-spacing:.12em}
+.axis-loader-word span{display:inline-block;opacity:.32;filter:blur(.2px);text-shadow:0 0 0 rgba(141,107,255,0);animation:axisLetterWave 1.7s ease-in-out infinite}
+.axis-loader-word span:nth-child(1){animation-delay:0s}
+.axis-loader-word span:nth-child(2){animation-delay:.12s}
+.axis-loader-word span:nth-child(3){animation-delay:.24s}
+.axis-loader-word span:nth-child(4){animation-delay:.36s}
+.axis-loader-sub{font-size:10px;text-transform:uppercase;letter-spacing:.24em;color:var(--muted)}
+.axis-loader-line{width:min(280px,62vw);height:2px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden}
+.axis-loader-line:before{content:"";display:block;width:34%;height:100%;border-radius:inherit;background:linear-gradient(90deg,transparent,rgba(181,158,255,.95),rgba(91,212,255,.9),transparent);animation:axisSweep 1.45s ease-in-out infinite}
+@keyframes axisLetterWave{
+  0%,100%{opacity:.28;transform:translateY(0) scale(1);text-shadow:0 0 0 rgba(141,107,255,0)}
+  35%{opacity:1;transform:translateY(-3px) scale(1.04);text-shadow:0 0 26px rgba(141,107,255,.52)}
+  55%{opacity:.72;transform:translateY(0) scale(1)}
+}
+@keyframes axisSweep{0%{transform:translateX(-140%)}60%,100%{transform:translateX(340%)}}
+@media (prefers-reduced-motion:reduce){
+  .axis-loader-word span,.axis-loader-line:before{animation:none!important}
+  .axis-loader-word span{opacity:1}
+}
 
 .login-shell{min-height:100vh;display:grid;place-items:center;padding:42px 28px}
 .login-card{
@@ -82,6 +103,25 @@ button{cursor:pointer}
 .top-wordmark{font-size:24px;font-weight:900;letter-spacing:.32em;padding-left:.32em}
 .top-copy{font-size:8px;color:var(--muted2);text-align:center;margin-top:3px}
 .top-actions{display:flex;gap:9px;align-items:center}
+.weather-chip,.axis-score-chip{border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.035);padding:9px 12px;display:flex;align-items:center;gap:8px;min-height:38px}
+.weather-chip{font-size:10px;color:#d8d1dd}
+.weather-chip strong{font-size:12px;color:white}
+.weather-chip small{font-size:9px;color:var(--muted)}
+.axis-score-chip{font-size:10px}
+.axis-score-chip strong{font-size:12px}
+.axis-score-chip span{color:var(--muted)}
+.tile[data-app="appointments"]{box-shadow:0 18px 50px rgba(88,126,255,.08),inset 0 0 0 1px rgba(88,126,255,.03)}
+.tile[data-app="delivery"]{box-shadow:0 18px 50px rgba(59,205,205,.07),inset 0 0 0 1px rgba(59,205,205,.03)}
+.tile[data-app="pd_calendar"]{box-shadow:0 18px 50px rgba(183,91,255,.08),inset 0 0 0 1px rgba(183,91,255,.03)}
+.tile[data-app="oracle"]{box-shadow:0 18px 50px rgba(242,184,92,.06),inset 0 0 0 1px rgba(242,184,92,.03)}
+.tile[data-app="appointments"]:hover{border-color:rgba(100,140,255,.34);box-shadow:0 22px 58px rgba(88,126,255,.13)}
+.tile[data-app="delivery"]:hover{border-color:rgba(74,214,214,.32);box-shadow:0 22px 58px rgba(59,205,205,.12)}
+.tile[data-app="pd_calendar"]:hover{border-color:rgba(193,113,255,.34);box-shadow:0 22px 58px rgba(183,91,255,.13)}
+.tile[data-app="oracle"]:hover{border-color:rgba(242,184,92,.30);box-shadow:0 22px 58px rgba(242,184,92,.10)}
+.mobile-tile[data-app="appointments"]{box-shadow:0 14px 36px rgba(88,126,255,.06)}
+.mobile-tile[data-app="delivery"]{box-shadow:0 14px 36px rgba(59,205,205,.055)}
+.mobile-tile[data-app="pd_calendar"]{box-shadow:0 14px 36px rgba(183,91,255,.06)}
+.mobile-tile[data-app="oracle"]{box-shadow:0 14px 36px rgba(242,184,92,.05)}
 .connected{border:1px solid var(--line);border-radius:999px;padding:9px 11px;font-size:10px;color:#bbb3c1}
 .connected:before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green);margin-right:6px}
 .userbtn{height:46px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.045);color:white;display:flex;align-items:center;gap:9px;padding:4px 12px 4px 4px}
@@ -205,6 +245,8 @@ button{cursor:pointer}
   .app-shell{padding:12px}
   .topbar{top:8px}
   .connected,.userbtn span:last-child{display:none}
+  .weather-chip small,.axis-score-chip span{display:none}
+  .weather-chip,.axis-score-chip{padding:8px 9px}
   .main{padding:27px 1px 24px}
   .hero{min-height:126px;padding:21px}
   .hero h1{font-size:34px}
@@ -231,7 +273,13 @@ button{cursor:pointer}
 </style>
 </head>
 <body>
-<div id="loading" class="loading"><span>AXIS</span></div>
+<div id="loading" class="loading">
+  <div class="axis-loader">
+    <div class="axis-loader-word" aria-label="AXIS"><span>A</span><span>X</span><span>I</span><span>S</span></div>
+    <div class="axis-loader-line"></div>
+    <div class="axis-loader-sub">Connecting systems</div>
+  </div>
+</div>
 
 <section id="loginView" class="login-shell hidden">
   <div class="login-card fade">
@@ -283,6 +331,8 @@ button{cursor:pointer}
     <header class="topbar">
       <div><div class="top-wordmark">AXIS</div><div class="top-copy">© 2026</div></div>
       <div class="top-actions">
+        <div id="weatherChip" class="weather-chip"><strong>—°</strong><small>Blackburn</small></div>
+        <div class="axis-score-chip"><strong id="axisPoints">—</strong><span>AXIS pts</span><strong id="axisRank">#—</strong></div>
         <div class="connected">Connected</div>
         <button id="profileBtn" class="userbtn"><span id="avatar" class="avatar">AX</span><span id="userName"></span></button>
       </div>
@@ -603,7 +653,54 @@ async function createFirstPin(){
   }
 }
 
-async function openAxis(){renderProfile();renderTiles();await refreshCounts();startTimer();show(document.getElementById("appView"))}
+
+function weatherEmoji(code,wind){
+  const c=Number(code);
+  if(Number(wind)>=35)return"🌬️";
+  if(c===0)return"☀️";
+  if([1,2].includes(c))return"⛅";
+  if(c===3)return"☁️";
+  if([45,48].includes(c))return"🌫️";
+  if([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(c))return"🌧️";
+  if([71,73,75,77,85,86].includes(c))return"❄️";
+  if([95,96,99].includes(c))return"⛈️";
+  return"🌤️";
+}
+
+async function loadWeather(){
+  const el=document.getElementById("weatherChip");
+  if(!el)return;
+  try{
+    const res=await fetch("https://api.open-meteo.com/v1/forecast?latitude=-37.8398&longitude=145.1555&current=temperature_2m,weather_code,wind_speed_10m&forecast_days=1&timezone=Australia%2FMelbourne",{cache:"no-store"});
+    if(!res.ok)throw new Error("Weather unavailable");
+    const data=await res.json();
+    const cur=data?.current;
+    if(!cur)return;
+    const temp=Math.round(Number(cur.temperature_2m));
+    const wind=Number(cur.wind_speed_10m||0);
+    el.innerHTML=`<strong>${temp}° ${weatherEmoji(cur.weather_code,wind)}</strong><small>Blackburn</small>`;
+  }catch(e){
+    console.warn("AXIS weather:",e);
+  }
+}
+
+function renderAxisScorePlaceholder(){
+  const points=document.getElementById("axisPoints");
+  const rank=document.getElementById("axisRank");
+  if(points)points.textContent="—";
+  if(rank)rank.textContent="#—";
+}
+
+async function openAxis(){
+  renderProfile();
+  renderTiles();
+  renderAxisScorePlaceholder();
+  loadWeather();
+  await refreshCounts();
+  startTimer();
+  show(document.getElementById("appView"));
+}
+
 
 function renderProfile(){
   const full=`${profile.first_name} ${profile.last_name}`,init=initials(profile);
@@ -632,7 +729,20 @@ async function launchAxisApp(a,event){
   if(target){
     try{
       target.document.title=`Opening ${label}…`;
-      target.document.body.innerHTML=`<div style="font-family:system-ui,-apple-system,sans-serif;background:#15111c;color:#fff;min-height:100vh;display:grid;place-items:center;margin:0"><div style="text-align:center"><div style="font-size:28px;font-weight:800;letter-spacing:.18em">AXIS</div><div style="margin-top:14px;opacity:.65">Opening ${label}…</div></div></div>`;
+      target.document.body.innerHTML=`<style>
+html,body{margin:0;min-height:100%;background:#15111c;color:#fff;font-family:system-ui,-apple-system,sans-serif}
+body{display:grid;place-items:center;background:radial-gradient(circle at 50% 42%,rgba(141,107,255,.16),transparent 34%),linear-gradient(145deg,#0f0d13,#151219 48%,#17121d 100%);overflow:hidden}
+.wrap{text-align:center;padding:24px}
+.word{display:flex;justify-content:center;gap:.28em;font-size:clamp(34px,7vw,68px);font-weight:950;letter-spacing:.12em}
+.word span{display:inline-block;opacity:.3;animation:w 1.7s ease-in-out infinite}
+.word span:nth-child(2){animation-delay:.12s}.word span:nth-child(3){animation-delay:.24s}.word span:nth-child(4){animation-delay:.36s}
+.line{width:min(280px,68vw);height:2px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;margin:20px auto 0}
+.line:before{content:"";display:block;width:34%;height:100%;background:linear-gradient(90deg,transparent,#b59eff,#5bd4ff,transparent);animation:s 1.45s ease-in-out infinite}
+.sub{margin-top:16px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.62}
+@keyframes w{0%,100%{opacity:.28;transform:translateY(0)}35%{opacity:1;transform:translateY(-3px);text-shadow:0 0 26px rgba(141,107,255,.55)}55%{opacity:.7;transform:translateY(0)}}
+@keyframes s{0%{transform:translateX(-140%)}60%,100%{transform:translateX(340%)}}
+@media(prefers-reduced-motion:reduce){.word span,.line:before{animation:none}.word span{opacity:1}}
+</style><div class="wrap"><div class="word"><span>A</span><span>X</span><span>I</span><span>S</span></div><div class="line"></div><div class="sub">Opening ${label}</div></div>`;
     }catch{}
   }
 
@@ -676,8 +786,8 @@ async function launchAxisApp(a,event){
 function renderTiles(){
   const grid=document.getElementById("tileGrid"),mob=document.getElementById("mobileList");grid.innerHTML="";mob.innerHTML="";
   apps.filter(a=>profile[a.field]).forEach(a=>{
-    const el=document.createElement("a");el.className="tile";el.href=a.url;el.target="_blank";el.rel="noopener";el.innerHTML=tileHtml(a);el.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);grid.appendChild(el);
-    const m=document.createElement("a");m.className="mobile-tile";m.href=a.url;m.target="_blank";m.rel="noopener";m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong><small>${a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date")}</small></div><div class="badge ${counts[a.key]?"warn":"ok"}">${a.external?"↗":counts[a.key]||"✓"}</div>`;m.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);mob.appendChild(m);
+    const el=document.createElement("a");el.className="tile";el.dataset.app=a.key;el.href=a.url;el.target="_blank";el.rel="noopener";el.innerHTML=tileHtml(a);el.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);grid.appendChild(el);
+    const m=document.createElement("a");m.className="mobile-tile";m.dataset.app=a.key;m.href=a.url;m.target="_blank";m.rel="noopener";m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong><small>${a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date")}</small></div><div class="badge ${counts[a.key]?"warn":"ok"}">${a.external?"↗":counts[a.key]||"✓"}</div>`;m.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);mob.appendChild(m);
   });
 
   const qr=document.createElement("button");qr.className="tile";qr.innerHTML=`<div class="tile-top"><div class="icon">▦</div><div class="badge ok">✓</div></div><div class="qr-tile-body"><div id="qrTilePreview" class="qr-preview"></div><div><h2>My QR</h2><p>${profile.first_name} ${profile.last_name}<br>${profile.position||"Contact card"}</p></div></div><div class="tile-bottom"><span>Ready to scan</span><strong>SHOW CARD</strong></div>`;qr.onclick=openProfile;grid.appendChild(qr);
@@ -696,7 +806,11 @@ function renderTiles(){
 async function refreshCounts(){
   try{const {data,error}=await client.rpc("axis_notification_counts");if(error)throw error;counts={};(data||[]).forEach(r=>counts[r.app_key]=Number(r.notification_count||0));renderTiles()}catch(e){console.warn(e)}
 }
-function startTimer(){if(timer)clearInterval(timer);timer=setInterval(refreshCounts,60000)}
+function startTimer(){
+  if(timer)clearInterval(timer);
+  timer=setInterval(refreshCounts,60000);
+  setInterval(loadWeather,45*60*1000);
+}
 function updateSummary(){const total=Object.values(counts).reduce((a,b)=>a+Number(b||0),0);openActions.textContent=total;summary.textContent=total?`${total} item${total===1?"":"s"} require your attention.`:"Your systems are up to date."}
 async function recordLaunch(key){
   try{
