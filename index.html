@@ -232,6 +232,68 @@ button{cursor:pointer}
 .bar{height:8px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
 .bar > div{height:100%;background:linear-gradient(90deg,var(--purple-deep),var(--purple));border-radius:999px}
 
+
+/* AXIS V1 engagement layer */
+.tile[data-app]{isolation:isolate}
+.tile[data-app]:after{
+  content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(135deg,var(--app-wash,transparent),transparent 44%);
+  opacity:.72
+}
+.tile[data-app] .tile-top,.tile[data-app] .tile-bottom,.tile[data-app] h2,.tile[data-app] p{z-index:1}
+.tile[data-app] .icon{
+  border-color:var(--app-line,var(--line));
+  background:var(--app-icon,rgba(255,255,255,.035));
+  box-shadow:0 0 28px var(--app-shadow,transparent)
+}
+.tile[data-app="appointments"]{
+  --app-line:rgba(91,132,255,.48);--app-icon:rgba(75,112,255,.12);--app-shadow:rgba(73,116,255,.18);--app-wash:rgba(65,103,255,.10);
+  border-color:rgba(91,132,255,.32);box-shadow:0 20px 60px rgba(65,103,255,.14),inset 4px 0 0 rgba(91,132,255,.72)
+}
+.tile[data-app="delivery"]{
+  --app-line:rgba(62,218,210,.48);--app-icon:rgba(43,199,190,.11);--app-shadow:rgba(43,205,196,.16);--app-wash:rgba(43,205,196,.085);
+  border-color:rgba(62,218,210,.29);box-shadow:0 20px 60px rgba(43,205,196,.12),inset 4px 0 0 rgba(62,218,210,.68)
+}
+.tile[data-app="pd_calendar"]{
+  --app-line:rgba(199,105,255,.48);--app-icon:rgba(183,79,246,.12);--app-shadow:rgba(183,79,246,.18);--app-wash:rgba(183,79,246,.10);
+  border-color:rgba(199,105,255,.30);box-shadow:0 20px 60px rgba(183,79,246,.14),inset 4px 0 0 rgba(199,105,255,.70)
+}
+.tile[data-app="oracle"]{
+  --app-line:rgba(244,186,85,.48);--app-icon:rgba(244,186,85,.11);--app-shadow:rgba(244,186,85,.14);--app-wash:rgba(244,186,85,.075);
+  border-color:rgba(244,186,85,.28);box-shadow:0 20px 60px rgba(244,186,85,.10),inset 4px 0 0 rgba(244,186,85,.66)
+}
+@media(hover:hover) and (pointer:fine){
+  .tile[data-app="appointments"]:hover{box-shadow:0 25px 72px rgba(65,103,255,.23),inset 4px 0 0 rgba(111,150,255,.94)}
+  .tile[data-app="delivery"]:hover{box-shadow:0 25px 72px rgba(43,205,196,.20),inset 4px 0 0 rgba(79,235,225,.92)}
+  .tile[data-app="pd_calendar"]:hover{box-shadow:0 25px 72px rgba(183,79,246,.22),inset 4px 0 0 rgba(211,130,255,.92)}
+  .tile[data-app="oracle"]:hover{box-shadow:0 25px 72px rgba(244,186,85,.18),inset 4px 0 0 rgba(255,205,111,.90)}
+}
+.mobile-tile[data-app="appointments"]{border-color:rgba(91,132,255,.30);box-shadow:inset 4px 0 0 rgba(91,132,255,.72),0 14px 34px rgba(65,103,255,.10)}
+.mobile-tile[data-app="delivery"]{border-color:rgba(62,218,210,.28);box-shadow:inset 4px 0 0 rgba(62,218,210,.68),0 14px 34px rgba(43,205,196,.09)}
+.mobile-tile[data-app="pd_calendar"]{border-color:rgba(199,105,255,.29);box-shadow:inset 4px 0 0 rgba(199,105,255,.70),0 14px 34px rgba(183,79,246,.10)}
+.mobile-tile[data-app="oracle"]{border-color:rgba(244,186,85,.27);box-shadow:inset 4px 0 0 rgba(244,186,85,.66),0 14px 34px rgba(244,186,85,.08)}
+.league-tile{background:linear-gradient(150deg,rgba(48,37,62,.97),rgba(28,23,35,.98));border-color:rgba(181,158,255,.24)}
+.league-podium{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px;position:relative}
+.league-mini{padding:9px 8px;border:1px solid rgba(255,255,255,.07);border-radius:13px;background:rgba(255,255,255,.025);min-width:0}
+.league-mini b{font-size:10px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.league-mini span{font-size:8px;color:var(--muted);display:block;margin-top:3px}
+.league-list{display:grid;gap:8px;margin-top:18px}
+.league-row{display:grid;grid-template-columns:54px minmax(0,1fr) 100px 100px;gap:12px;align-items:center;padding:13px 15px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.025)}
+.league-row.me{border-color:rgba(181,158,255,.34);background:rgba(141,107,255,.075)}
+.league-rank{font-size:18px;font-weight:950;color:var(--purple-soft)}
+.league-name strong{display:block;font-size:12px}.league-name small{display:block;font-size:9px;color:var(--muted);margin-top:3px}
+.league-score,.league-launches{text-align:right}.league-score strong,.league-launches strong{display:block;font-size:13px}.league-score span,.league-launches span{display:block;font-size:8px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.06em}
+.add-staff-btn{height:44px;border:1px solid rgba(181,158,255,.28);border-radius:13px;background:rgba(141,107,255,.13);color:#fff;padding:0 15px;font-size:9px;font-weight:900;letter-spacing:.08em}
+.modal-toolbar{display:flex;align-items:center;gap:10px;margin-top:18px}
+.modal-toolbar .search{margin-top:0;flex:1}
+.add-help{font-size:9px;color:var(--muted);line-height:1.5;margin-top:11px}
+.score-note{font-size:9px;color:var(--muted);line-height:1.55;margin-top:14px}
+@media(max-width:700px){
+  .league-row{grid-template-columns:42px minmax(0,1fr) 76px}.league-launches{display:none}
+  .league-score strong{font-size:12px}
+  .modal-toolbar{align-items:stretch;flex-direction:column}.add-staff-btn{width:100%}
+}
+
 .mobile-list{display:none}
 
 @media(max-width:1100px){
@@ -375,7 +437,10 @@ button{cursor:pointer}
     <div><h2>User Management</h2><p>Manage AXIS staff access and PINs</p></div>
     <button id="closeUsers" class="close">×</button>
   </div>
-  <input id="staffSearch" class="search" placeholder="Search name, email, department or role">
+  <div class="modal-toolbar">
+    <input id="staffSearch" class="search" placeholder="Search name, email, department or role">
+    <button id="addStaffBtn" class="add-staff-btn">+ ADD STAFF</button>
+  </div>
   <div id="staffList" class="staff-list"></div>
 </section>
 
@@ -403,6 +468,44 @@ button{cursor:pointer}
   <button id="resetPin" class="primary" style="background:rgba(255,255,255,.06);border:1px solid var(--line)">RESET PIN</button>
   <button id="toggleActive" class="primary" style="background:rgba(255,107,120,.12);border:1px solid rgba(255,107,120,.2)">DEACTIVATE USER</button>
   <div id="editFeedback" class="feedback"></div>
+</section>
+
+
+<section id="addStaffModal" class="modal hidden">
+  <div class="modal-head">
+    <div><h2>Add Staff</h2><p>Create an AXIS staff profile and choose launcher access</p></div>
+    <button id="closeAddStaff" class="close">×</button>
+  </div>
+  <div class="user-edit">
+    <div><label>First name</label><input id="aFirst"></div>
+    <div><label>Last name</label><input id="aLast"></div>
+    <div><label>Work email</label><input id="aEmail" type="email"></div>
+    <div><label>Phone — optional</label><input id="aPhone"></div>
+    <div><label>Position</label><input id="aPosition"></div>
+    <div><label>Department</label><input id="aDepartment"></div>
+    <div><label>Role</label><select id="aRole"><option value="user">user</option><option value="manager">manager</option><option value="admin">admin</option></select></div>
+  </div>
+  <div class="access-grid">
+    <div class="access-item"><span>Appointments</span><button class="toggle add-access" data-access="appointment_access"></button></div>
+    <div class="access-item"><span>Delivery</span><button class="toggle add-access" data-access="delivery_access"></button></div>
+    <div class="access-item"><span>PD Calendar</span><button class="toggle add-access" data-access="pd_calendar_access"></button></div>
+    <div class="access-item"><span>Oracle</span><button class="toggle add-access" data-access="oracle_access"></button></div>
+    <div class="access-item"><span>vCard / QR</span><button class="toggle add-access on" data-access="vcard_enabled"></button></div>
+  </div>
+  <div class="add-help">New staff will create their own 4-digit AXIS PIN the first time they sign in with this email.</div>
+  <button id="createStaffBtn" class="primary">CREATE STAFF MEMBER</button>
+  <div id="addStaffFeedback" class="feedback"></div>
+</section>
+
+
+<section id="leagueModal" class="modal hidden">
+  <div class="modal-head">
+    <div><h2>AXIS League</h2><p id="leaguePeriod">Monthly system usage · users only</p></div>
+    <button id="closeLeague" class="close">×</button>
+  </div>
+  <div id="leagueSummary" class="insight-grid"></div>
+  <div id="leagueList" class="league-list"></div>
+  <div class="score-note">AXIS Score rewards useful launcher adoption with daily caps. Managers and Admin are tracked in Insights but are excluded from the League.</div>
 </section>
 
 <section id="insightsModal" class="modal hidden">
@@ -434,6 +537,7 @@ const PIN_WINDOW=30*24*60*60*1000, PIN_KEY="axis_pin_authenticated_at";
 const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 let profile=null,session=null,counts={},timer=null,staff=[],editing=null;
 let recoveryMode=false;
+let leagueRows=[],myLeague=null,scoreData={month:0,lifetime:0,rank:null,launches:0};
 
 const apps=[
   {key:"appointments",name:"Appointments",icon:"📅",desc:"Appointment control",url:"https://autopact-blackburn.github.io/Blackburn-Appointment-Tracker/",field:"appointment_access"},
@@ -654,6 +758,85 @@ async function createFirstPin(){
 }
 
 
+
+function monthStartIso(){
+  const d=new Date();
+  return new Date(d.getFullYear(),d.getMonth(),1,0,0,0,0).toISOString();
+}
+function monthLabelNow(){
+  return new Intl.DateTimeFormat("en-AU",{month:"long",year:"numeric"}).format(new Date());
+}
+function scoreLaunches(rows){
+  const weights={appointments:{first:5,extra:1,max:9},delivery:{first:4,extra:1,max:7},pd_calendar:{first:4,extra:1,max:7},oracle:{first:2,extra:1,max:4}};
+  const grouped=new Map();
+  rows.forEach(r=>{
+    const w=weights[r.app_key]; if(!w||!r.launched_at)return;
+    const d=new Date(r.launched_at);
+    const key=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}|${r.app_key}`;
+    grouped.set(key,(grouped.get(key)||0)+1);
+  });
+  let score=0;
+  grouped.forEach((n,key)=>{
+    const app=key.split("|")[1],w=weights[app]; if(!w)return;
+    score+=Math.min(w.max,w.first+Math.max(0,n-1)*w.extra);
+  });
+  return score;
+}
+async function loadAxisLeague(){
+  try{
+    const [pRes,lRes]=await Promise.all([
+      client.from("profiles").select("id,first_name,last_name,role,active"),
+      client.from("app_launches").select("user_id,app_key,launched_at").order("launched_at",{ascending:false}).limit(5000)
+    ]);
+    if(pRes.error)throw pRes.error;if(lRes.error)throw lRes.error;
+    const profiles=pRes.data||[],launches=lRes.data||[],start=new Date(monthStartIso());
+    const userProfiles=profiles.filter(p=>p.active&&p.role==="user");
+    leagueRows=userProfiles.map(p=>{
+      const all=launches.filter(x=>String(x.user_id)===String(p.id));
+      const monthly=all.filter(x=>new Date(x.launched_at)>=start);
+      return{
+        id:p.id,name:`${p.first_name||""} ${p.last_name||""}`.trim(),
+        monthlyScore:scoreLaunches(monthly),lifetimeScore:scoreLaunches(all),
+        launches:monthly.length
+      };
+    }).sort((a,b)=>b.monthlyScore-a.monthlyScore||b.launches-a.launches||a.name.localeCompare(b.name));
+    leagueRows.forEach((r,i)=>r.rank=i+1);
+    myLeague=profile?.role==="user"?leagueRows.find(x=>String(x.id)===String(profile.id))||null:null;
+    if(myLeague){
+      const allMine=launches.filter(x=>String(x.user_id)===String(profile.id));
+      scoreData={month:myLeague.monthlyScore,lifetime:scoreLaunches(allMine),rank:myLeague.rank,launches:myLeague.launches};
+    }else{
+      const allMine=launches.filter(x=>String(x.user_id)===String(profile?.id));
+      scoreData={month:scoreLaunches(allMine.filter(x=>new Date(x.launched_at)>=start)),lifetime:scoreLaunches(allMine),rank:null,launches:allMine.filter(x=>new Date(x.launched_at)>=start).length};
+    }
+    renderScoreChip();
+  }catch(e){console.warn("AXIS League unavailable",e)}
+}
+function renderScoreChip(){
+  const points=document.getElementById("axisPoints"),rank=document.getElementById("axisRank");
+  if(!points||!rank||!profile)return;
+  if(profile.role==="user"){
+    points.textContent=scoreData.month;
+    rank.textContent=scoreData.rank?`#${scoreData.rank}`:"#—";
+  }else{
+    points.textContent="AXIS";
+    rank.textContent=profile.role==="admin"?"Admin":"Manager";
+  }
+}
+function renderLeagueTileHtml(){
+  const top=leagueRows.slice(0,3);
+  const pod=top.map(r=>`<div class="league-mini"><b>#${r.rank} ${r.name.split(" ")[0]}</b><span>${r.monthlyScore} score</span></div>`).join("");
+  return `<div class="tile-top"><div class="icon">🏁</div><div class="badge ok">${leagueRows.length}</div></div><div><h2>AXIS League</h2><p>${monthLabelNow()} · users only</p><div class="league-podium">${pod||"<div class='league-mini'><b>League</b><span>Building...</span></div>"}</div></div><div class="tile-bottom"><span>${profile.role==="user"&&myLeague?`Your rank #${myLeague.rank}`:"Monthly usage"}</span><strong>VIEW LEAGUE</strong></div>`;
+}
+function openLeague(){
+  overlay.classList.remove("hidden");leagueModal.classList.remove("hidden");
+  leaguePeriod.textContent=`${monthLabelNow()} · Monthly system usage · users only`;
+  leagueSummary.innerHTML=profile.role==="user"
+    ?`<div class="stat"><strong>${scoreData.month}</strong><span>Your Monthly Score</span></div><div class="stat"><strong>${scoreData.rank?"#"+scoreData.rank:"—"}</strong><span>Your Rank</span></div><div class="stat"><strong>${scoreData.lifetime}</strong><span>Lifetime Score</span></div><div class="stat"><strong>${scoreData.launches}</strong><span>Monthly Launches</span></div>`
+    :`<div class="stat"><strong>${leagueRows.length}</strong><span>League Users</span></div><div class="stat"><strong>${leagueRows.reduce((a,b)=>a+b.monthlyScore,0)}</strong><span>Total Monthly Score</span></div><div class="stat"><strong>${leagueRows.reduce((a,b)=>a+b.launches,0)}</strong><span>Monthly Launches</span></div><div class="stat"><strong>${leagueRows[0]?.monthlyScore||0}</strong><span>Leading Score</span></div>`;
+  leagueList.innerHTML=leagueRows.map(r=>`<div class="league-row ${String(r.id)===String(profile.id)?"me":""}"><div class="league-rank">#${r.rank}</div><div class="league-name"><strong>${r.name}</strong><small>${String(r.id)===String(profile.id)?"You · ":""}AXIS user</small></div><div class="league-score"><strong>${r.monthlyScore}</strong><span>Score</span></div><div class="league-launches"><strong>${r.launches}</strong><span>Launches</span></div></div>`).join("")||"<div class='report-row'><span>No user activity recorded this month.</span></div>";
+}
+
 function weatherEmoji(code,wind){
   const c=Number(code);
   if(Number(wind)>=35)return"🌬️";
@@ -693,10 +876,10 @@ function renderAxisScorePlaceholder(){
 
 async function openAxis(){
   renderProfile();
-  renderTiles();
   renderAxisScorePlaceholder();
   loadWeather();
-  await refreshCounts();
+  await Promise.all([refreshCounts(),loadAxisLeague()]);
+  renderTiles();
   startTimer();
   show(document.getElementById("appView"));
 }
@@ -722,6 +905,7 @@ async function launchAxisApp(a,event){
   event.preventDefault();
 
   const label=a.key==="appointments"?"Appointments":a.key==="delivery"?"Delivery":"PD Calendar";
+  const accent=a.key==="appointments"?"#6f96ff":a.key==="delivery"?"#4febe1":"#d382ff";
 
   // Open the destination tab immediately so browsers do not block it
   // while AXIS obtains the short-lived SSO token.
@@ -737,7 +921,7 @@ body{display:grid;place-items:center;background:radial-gradient(circle at 50% 42
 .word span{display:inline-block;opacity:.3;animation:w 1.7s ease-in-out infinite}
 .word span:nth-child(2){animation-delay:.12s}.word span:nth-child(3){animation-delay:.24s}.word span:nth-child(4){animation-delay:.36s}
 .line{width:min(280px,68vw);height:2px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;margin:20px auto 0}
-.line:before{content:"";display:block;width:34%;height:100%;background:linear-gradient(90deg,transparent,#b59eff,#5bd4ff,transparent);animation:s 1.45s ease-in-out infinite}
+.line:before{content:"";display:block;width:34%;height:100%;background:linear-gradient(90deg,transparent,${accent},#ffffff,transparent);animation:s 1.45s ease-in-out infinite}
 .sub{margin-top:16px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.62}
 @keyframes w{0%,100%{opacity:.28;transform:translateY(0)}35%{opacity:1;transform:translateY(-3px);text-shadow:0 0 26px rgba(141,107,255,.55)}55%{opacity:.7;transform:translateY(0)}}
 @keyframes s{0%{transform:translateX(-140%)}60%,100%{transform:translateX(340%)}}
@@ -790,6 +974,9 @@ function renderTiles(){
     const m=document.createElement("a");m.className="mobile-tile";m.dataset.app=a.key;m.href=a.url;m.target="_blank";m.rel="noopener";m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong><small>${a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date")}</small></div><div class="badge ${counts[a.key]?"warn":"ok"}">${a.external?"↗":counts[a.key]||"✓"}</div>`;m.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);mob.appendChild(m);
   });
 
+  const league=document.createElement("button");league.className="tile league-tile";league.innerHTML=renderLeagueTileHtml();league.onclick=openLeague;grid.appendChild(league);
+  const lm=document.createElement("button");lm.className="mobile-tile";lm.innerHTML=`<div class="icon">🏁</div><div><strong>AXIS League</strong><small>${profile.role==="user"&&myLeague?`Your rank #${myLeague.rank} · ${scoreData.month} score`:"Monthly usage league"}</small></div><div class="badge ok">›</div>`;lm.onclick=openLeague;mob.appendChild(lm);
+
   const qr=document.createElement("button");qr.className="tile";qr.innerHTML=`<div class="tile-top"><div class="icon">▦</div><div class="badge ok">✓</div></div><div class="qr-tile-body"><div id="qrTilePreview" class="qr-preview"></div><div><h2>My QR</h2><p>${profile.first_name} ${profile.last_name}<br>${profile.position||"Contact card"}</p></div></div><div class="tile-bottom"><span>Ready to scan</span><strong>SHOW CARD</strong></div>`;qr.onclick=openProfile;grid.appendChild(qr);
   const qm=document.createElement("button");qm.className="mobile-tile";qm.innerHTML=`<div class="icon">▦</div><div><strong>My QR</strong><small>Contact card</small></div><div class="badge ok">›</div>`;qm.onclick=openProfile;mob.appendChild(qm);
   setTimeout(()=>buildQr(document.getElementById("qrTilePreview"),240,58),0);
@@ -816,6 +1003,7 @@ async function recordLaunch(key){
   try{
     const {error}=await client.from("app_launches").insert({user_id:profile.id,app_key:key});
     if(error) console.warn("Launch tracking failed",error);
+    else setTimeout(async()=>{await loadAxisLeague();renderTiles()},250);
   }catch(e){
     console.warn("Launch tracking failed",e);
   }
@@ -860,12 +1048,42 @@ function buildQr(box,renderSize,cssSize){
 }
 
 function openProfile(){overlay.classList.remove("hidden");profileDrawer.classList.remove("hidden")}
-function closeAll(){[profileDrawer,usersModal,editModal,insightsModal].forEach(x=>x.classList.add("hidden"));overlay.classList.add("hidden")}
+function closeAll(){[profileDrawer,usersModal,editModal,addStaffModal,leagueModal,insightsModal].forEach(x=>x.classList.add("hidden"));overlay.classList.add("hidden")}
 
 async function adminCall(payload){
   const {data}=await client.auth.getSession();const token=data.session?.access_token;if(!token)throw new Error("AXIS session expired.");
   const r=await fetch(ADMIN_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(payload)}),j=await r.json();
   if(!r.ok||!j.ok)throw new Error(j.error||"Admin action failed.");return j;
+}
+
+
+function openAddStaff(){
+  usersModal.classList.add("hidden");addStaffModal.classList.remove("hidden");
+  ["aFirst","aLast","aEmail","aPhone","aPosition","aDepartment"].forEach(id=>document.getElementById(id).value="");
+  aRole.value="user";
+  document.querySelectorAll(".add-access").forEach(b=>b.classList.toggle("on",b.dataset.access==="vcard_enabled"));
+  feedback(addStaffFeedback,"");
+}
+function closeAddStaffModal(){addStaffModal.classList.add("hidden");usersModal.classList.remove("hidden")}
+async function createStaff(){
+  const first=aFirst.value.trim(),last=aLast.value.trim(),email=aEmail.value.trim().toLowerCase();
+  if(!first||!last)return feedback(addStaffFeedback,"Enter first and last name.","error");
+  if(!email||!email.includes("@"))return feedback(addStaffFeedback,"Enter a valid work email.","error");
+  createStaffBtn.disabled=true;feedback(addStaffFeedback,"Creating AXIS staff member…");
+  try{
+    const payload={
+      action:"create_user",first_name:first,last_name:last,email,
+      phone:aPhone.value.trim(),position:aPosition.value.trim(),department:aDepartment.value.trim(),
+      site:"Blackburn",role:aRole.value
+    };
+    document.querySelectorAll(".add-access").forEach(b=>payload[b.dataset.access]=b.classList.contains("on"));
+    await adminCall(payload);
+    feedback(addStaffFeedback,"Staff member created. They can now set their AXIS PIN on first sign-in.","success");
+    await loadStaff();
+    setTimeout(()=>{closeAddStaffModal();renderStaff(staff)},650);
+  }catch(e){
+    feedback(addStaffFeedback,e.message||"Unable to create staff member.","error");
+  }finally{createStaffBtn.disabled=false}
 }
 
 async function loadStaff(){
@@ -903,17 +1121,29 @@ async function toggleEditingActive(){
 async function openInsights(){
   overlay.classList.remove("hidden");insightsModal.classList.remove("hidden");
   const [pRes,lRes,aRes]=await Promise.all([
-    client.from("profiles").select("id,first_name,last_name,email,active,last_login_at,login_count"),
-    client.from("app_launches").select("user_id,app_key,launched_at").order("launched_at",{ascending:false}).limit(1000),
-    client.from("audit_log").select("action,created_at,target_user_id,actor_user_id").order("created_at",{ascending:false}).limit(30)
+    client.from("profiles").select("id,first_name,last_name,email,role,active,last_login_at,login_count"),
+    client.from("app_launches").select("user_id,app_key,launched_at").order("launched_at",{ascending:false}).limit(5000),
+    client.from("audit_log").select("action,created_at,target_user_id,actor_user_id").order("created_at",{ascending:false}).limit(50)
   ]);
   const ps=pRes.data||[],ls=lRes.data||[],au=aRes.data||[];
   const today=new Date();today.setHours(0,0,0,0);
-  sActive.textContent=ps.filter(x=>x.active).length;sToday.textContent=ps.filter(x=>x.last_login_at&&new Date(x.last_login_at)>=today).length;sNever.textContent=ps.filter(x=>!x.last_login_at).length;sLaunches.textContent=ls.length;
-  const usage={};ls.forEach(x=>usage[x.app_key]=(usage[x.app_key]||0)+1);const max=Math.max(1,...Object.values(usage));
-  appUsage.innerHTML=Object.entries(usage).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar-row"><span>${k}</span><div class="bar"><div style="width:${Math.max(4,v/max*100)}%"></div></div><strong>${v}</strong></div>`).join("")||"<div class='report-row'><span>No launches recorded yet.</span></div>";
-  loginReport.innerHTML=ps.sort((a,b)=>(b.login_count||0)-(a.login_count||0)).map(p=>`<div class="report-row"><strong>${p.first_name} ${p.last_name}</strong><span>${p.login_count||0} logins</span><span>${p.last_login_at?new Date(p.last_login_at).toLocaleDateString():"Never"}</span><span>${p.active?"Active":"Inactive"}</span></div>`).join("");
-  recentActivity.innerHTML=au.map(x=>`<div class="report-row"><strong>${x.action}</strong><span>${new Date(x.created_at).toLocaleString()}</span><span></span><span></span></div>`).join("")||"<div class='report-row'><span>No admin activity yet.</span></div>";
+  const monthStart=new Date(monthStartIso());
+  const monthLaunches=ls.filter(x=>new Date(x.launched_at)>=monthStart);
+  sActive.textContent=ps.filter(x=>x.active).length;
+  sToday.textContent=ps.filter(x=>x.last_login_at&&new Date(x.last_login_at)>=today).length;
+  sNever.textContent=ps.filter(x=>!x.last_login_at).length;
+  sLaunches.textContent=monthLaunches.length;
+
+  const usage={};monthLaunches.forEach(x=>usage[x.app_key]=(usage[x.app_key]||0)+1);const max=Math.max(1,...Object.values(usage));
+  appUsage.innerHTML=Object.entries(usage).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bar-row"><span>${k}</span><div class="bar"><div style="width:${Math.max(4,v/max*100)}%"></div></div><strong>${v}</strong></div>`).join("")||"<div class='report-row'><span>No launches recorded this month.</span></div>";
+
+  loginReport.innerHTML=ps.slice().sort((a,b)=>(b.login_count||0)-(a.login_count||0)).map(p=>{
+    const own=monthLaunches.filter(x=>String(x.user_id)===String(p.id));
+    return `<div class="report-row"><strong>${p.first_name} ${p.last_name}</strong><span>${p.role} · ${own.length} launches</span><span>${p.login_count||0} logins</span><span>${p.last_login_at?new Date(p.last_login_at).toLocaleDateString():"Never"}</span></div>`;
+  }).join("");
+
+  recentActivity.innerHTML=`<div class="score-note"><strong>AXIS League · ${monthLabelNow()}</strong><br>${leagueRows.slice(0,5).map(r=>`#${r.rank} ${r.name} — ${r.monthlyScore}`).join(" · ")||"No user league activity yet."}</div>`+
+    au.map(x=>`<div class="report-row"><strong>${x.action}</strong><span>${new Date(x.created_at).toLocaleString()}</span><span></span><span></span></div>`).join("");
 }
 
 async function logout(){if(timer)clearInterval(timer);await client.auth.signOut();localStorage.removeItem(PIN_KEY);profile=null;session=null;closeAll();show(loginView)}
@@ -1040,9 +1270,9 @@ backBtn.onclick=()=>{recoveryState.classList.add("hidden");loginState.classList.
 saveNewPinBtn.onclick=saveRecoveredPin;
 confirmPin.onkeydown=e=>{if(e.key==="Enter")saveRecoveredPin()};
 profileBtn.onclick=openProfile;closeProfile.onclick=closeAll;overlay.onclick=closeAll;saveContact.onclick=saveVcard;logoutBtn.onclick=logout;
-closeUsers.onclick=closeAll;staffSearch.oninput=e=>{const q=e.target.value.toLowerCase();renderStaff(staff.filter(p=>[p.first_name,p.last_name,p.email,p.position,p.department,p.role].some(v=>(v||"").toLowerCase().includes(q))))};
+closeUsers.onclick=closeAll;addStaffBtn.onclick=openAddStaff;closeAddStaff.onclick=closeAddStaffModal;createStaffBtn.onclick=createStaff;document.querySelectorAll(".add-access").forEach(b=>b.onclick=()=>b.classList.toggle("on"));staffSearch.oninput=e=>{const q=e.target.value.toLowerCase();renderStaff(staff.filter(p=>[p.first_name,p.last_name,p.email,p.position,p.department,p.role].some(v=>(v||"").toLowerCase().includes(q))))};
 closeEdit.onclick=()=>{editModal.classList.add("hidden");usersModal.classList.remove("hidden")};saveUser.onclick=saveEditing;resetPin.onclick=resetEditingPin;toggleActive.onclick=toggleEditingActive;
-closeInsights.onclick=closeAll;
+closeInsights.onclick=closeAll;closeLeague.onclick=closeAll;
 
 bootstrap();
 </script>
