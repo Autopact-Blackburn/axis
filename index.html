@@ -450,12 +450,12 @@ async function establishAxisSession(payload){
 }
 
 async function checkEmailStatus(){
-  const emailValue=email.value.trim().toLowerCase();
+  const emailValue=document.getElementById("loginEmail").value.trim().toLowerCase();
   const fb=loginFeedback;
 
   if(!emailValue){
     feedback(fb,"Enter your work email.","error");
-    email.focus();
+    document.getElementById("loginEmail").focus();
     return;
   }
 
@@ -486,7 +486,7 @@ async function checkEmailStatus(){
     }
 
     // Existing user: reveal/focus PIN and keep normal login flow.
-    pin.focus();
+    document.getElementById("loginPin").focus();
     feedback(fb,"PIN ready.");
   }catch(e){
     feedback(fb,e?.message||"Unable to check AXIS access.","error");
@@ -496,13 +496,13 @@ async function checkEmailStatus(){
 }
 
 async function doLogin(){
-  const emailValue=email.value.trim().toLowerCase();
-  const pinValue=pin.value.trim();
+  const emailValue=document.getElementById("loginEmail").value.trim().toLowerCase();
+  const pinValue=document.getElementById("loginPin").value.trim();
   const fb=loginFeedback;
 
   if(!emailValue){
     feedback(fb,"Enter your work email.","error");
-    email.focus();
+    document.getElementById("loginEmail").focus();
     return;
   }
 
@@ -514,11 +514,13 @@ async function doLogin(){
 
   if(!/^\d{4}$/.test(pinValue)){
     feedback(fb,"Enter your 4-digit AXIS PIN.","error");
-    pin.focus();
+    document.getElementById("loginPin").focus();
     return;
   }
 
   loginBtn.disabled=true;
+  const originalLoginText=loginBtn.textContent;
+  loginBtn.textContent="SIGNING IN…";
   feedback(fb,"Entering AXIS…");
 
   try{
@@ -556,7 +558,7 @@ async function doLogin(){
 }
 
 async function createFirstPin(){
-  const emailValue=email.value.trim().toLowerCase();
+  const emailValue=document.getElementById("loginEmail").value.trim().toLowerCase();
   const p1=firstPin.value.trim();
   const p2=firstPinConfirm.value.trim();
   const fb=firstPinFeedback;
@@ -640,7 +642,14 @@ async function refreshCounts(){
 }
 function startTimer(){if(timer)clearInterval(timer);timer=setInterval(refreshCounts,60000)}
 function updateSummary(){const total=Object.values(counts).reduce((a,b)=>a+Number(b||0),0);openActions.textContent=total;summary.textContent=total?`${total} item${total===1?"":"s"} require your attention.`:"Your systems are up to date."}
-async function recordLaunch(key){await client.from("app_launches").insert({user_id:profile.id,app_key:key}).catch(()=>{})}
+async function recordLaunch(key){
+  try{
+    const {error}=await client.from("app_launches").insert({user_id:profile.id,app_key:key});
+    if(error) console.warn("Launch tracking failed",error);
+  }catch(e){
+    console.warn("Launch tracking failed",e);
+  }
+}
 
 function vcard(){
  return ["BEGIN:VCARD","VERSION:3.0",`N:${profile.last_name||""};${profile.first_name||""};;;`,`FN:${profile.first_name} ${profile.last_name}`,`TITLE:${profile.position||""}`,`ORG:${profile.site||"AXIS"}`,profile.phone?`TEL;TYPE=CELL:${profile.phone}`:"",`EMAIL:${profile.email}`,"END:VCARD"].filter(Boolean).join("\n");
