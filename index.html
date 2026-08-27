@@ -620,11 +620,11 @@ function tileHtml(t){
 
 
 async function launchAxisApp(a,event){
-  if(!["appointments","delivery"].includes(a.key)) return;
+  if(!["appointments","delivery","pd_calendar"].includes(a.key)) return;
 
   event.preventDefault();
 
-  const label=a.key==="appointments"?"Appointments":"Delivery";
+  const label=a.key==="appointments"?"Appointments":a.key==="delivery"?"Delivery":"PD Calendar";
 
   // Open the destination tab immediately so browsers do not block it
   // while AXIS obtains the short-lived SSO token.
@@ -676,8 +676,8 @@ async function launchAxisApp(a,event){
 function renderTiles(){
   const grid=document.getElementById("tileGrid"),mob=document.getElementById("mobileList");grid.innerHTML="";mob.innerHTML="";
   apps.filter(a=>profile[a.field]).forEach(a=>{
-    const el=document.createElement("a");el.className="tile";el.href=a.url;el.target="_blank";el.rel="noopener";el.innerHTML=tileHtml(a);el.onclick=(event)=>["appointments","delivery"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);grid.appendChild(el);
-    const m=document.createElement("a");m.className="mobile-tile";m.href=a.url;m.target="_blank";m.rel="noopener";m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong><small>${a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date")}</small></div><div class="badge ${counts[a.key]?"warn":"ok"}">${a.external?"↗":counts[a.key]||"✓"}</div>`;m.onclick=(event)=>["appointments","delivery"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);mob.appendChild(m);
+    const el=document.createElement("a");el.className="tile";el.href=a.url;el.target="_blank";el.rel="noopener";el.innerHTML=tileHtml(a);el.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);grid.appendChild(el);
+    const m=document.createElement("a");m.className="mobile-tile";m.href=a.url;m.target="_blank";m.rel="noopener";m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong><small>${a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date")}</small></div><div class="badge ${counts[a.key]?"warn":"ok"}">${a.external?"↗":counts[a.key]||"✓"}</div>`;m.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);mob.appendChild(m);
   });
 
   const qr=document.createElement("button");qr.className="tile";qr.innerHTML=`<div class="tile-top"><div class="icon">▦</div><div class="badge ok">✓</div></div><div class="qr-tile-body"><div id="qrTilePreview" class="qr-preview"></div><div><h2>My QR</h2><p>${profile.first_name} ${profile.last_name}<br>${profile.position||"Contact card"}</p></div></div><div class="tile-bottom"><span>Ready to scan</span><strong>SHOW CARD</strong></div>`;qr.onclick=openProfile;grid.appendChild(qr);
