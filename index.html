@@ -7,7 +7,7 @@
 <title>AXIS</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-svg@1.1.0/dist/qrcode.min.js"></script>
 
 <style>
 :root {
@@ -88,12 +88,12 @@ button{cursor:pointer}
 
 .main{padding:42px 6px 30px}
 .hero{
-  min-height:190px;padding:30px;border:1px solid var(--line);border-radius:28px;
+  min-height:132px;padding:25px 28px;border:1px solid var(--line);border-radius:28px;
   background:linear-gradient(180deg,rgba(36,29,44,.88),rgba(26,22,31,.86));
   display:flex;align-items:center;justify-content:space-between;gap:30px;margin-bottom:20px;position:relative;overflow:hidden
 }
 .hero:after{content:"";position:absolute;right:-80px;top:-140px;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(141,107,255,.12),transparent 68%)}
-.hero h1{font-size:48px;letter-spacing:-1.9px;margin:0;position:relative}
+.hero h1{font-size:40px;letter-spacing:-1.6px;margin:0;position:relative}
 .hero p{font-size:14px;color:var(--muted);margin:11px 0 0;position:relative}
 .hero-stat{text-align:right;position:relative;min-width:150px}
 .hero-stat strong{font-size:34px;display:block}
@@ -101,13 +101,14 @@ button{cursor:pointer}
 
 .tile-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
 .tile{
-  min-height:255px;padding:24px;border:1px solid var(--line);border-radius:28px;
+  min-height:225px;padding:24px;border:1px solid var(--line);border-radius:28px;
   background:linear-gradient(180deg,rgba(36,29,44,.94),rgba(27,23,33,.96));
   color:white;text-decoration:none;display:flex;flex-direction:column;justify-content:space-between;
   position:relative;overflow:hidden;transition:.2s ease
 }
 .tile:before{content:"";position:absolute;right:-85px;top:-100px;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(141,107,255,.09),transparent 66%)}
 .tile:hover{transform:translateY(-2px);border-color:rgba(181,158,255,.28)}
+.tile-grid button.tile{width:100%;text-align:left}
 .tile.admin{background:linear-gradient(180deg,rgba(48,37,62,.94),rgba(29,24,37,.97))}
 .tile-top{display:flex;justify-content:space-between;gap:12px;position:relative}
 .icon{width:54px;height:54px;border:1px solid var(--line);border-radius:17px;display:grid;place-items:center;background:rgba(255,255,255,.035);font-size:23px}
@@ -118,9 +119,17 @@ button{cursor:pointer}
 .tile-bottom{display:flex;justify-content:space-between;gap:10px;align-items:center;position:relative}
 .tile-bottom span{font-size:10px;color:var(--muted)}
 .tile-bottom strong{font-size:10px;letter-spacing:.08em}
+.qr-tile-body{display:flex;align-items:center;gap:16px;position:relative}
+.qr-tile-body h2{margin:0}
+.qr-tile-body p{margin:6px 0 0}
+.insight-mini{display:grid;gap:8px;margin-top:13px;position:relative}
+.insight-mini-row{display:grid;grid-template-columns:82px 1fr auto;gap:8px;align-items:center;font-size:9px;color:var(--muted)}
+.insight-mini-bar{height:6px;background:rgba(255,255,255,.06);border-radius:999px;overflow:hidden}
+.insight-mini-bar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--purple-deep),var(--purple))}
 
-.qr-preview{width:62px;height:62px;background:#fff;border-radius:12px;padding:5px;display:grid;place-items:center;overflow:hidden}
-.qr-preview img{max-width:100%;max-height:100%;image-rendering:auto}
+
+.qr-preview{width:72px;height:72px;background:#fff;border-radius:14px;padding:7px;display:grid;place-items:center;overflow:hidden}
+.qr-preview svg{width:100%;height:100%;display:block}
 
 .overlay{position:fixed;inset:0;z-index:70;background:rgba(5,4,7,.62);backdrop-filter:blur(8px)}
 .drawer{
@@ -135,8 +144,8 @@ button{cursor:pointer}
 .identity-top .avatar{width:52px;height:52px;font-size:12px}
 .identity-top strong{font-size:17px;display:block}
 .identity-top small{display:block;font-size:11px;color:var(--muted);margin-top:3px}
-.qr-large{width:280px;height:280px;margin:24px auto 0;padding:14px;border-radius:20px;background:white;display:grid;place-items:center;overflow:hidden}
-.qr-large img{max-width:100%;max-height:100%;image-rendering:auto}
+.qr-large{width:280px;height:280px;margin:24px auto 0;padding:18px;border-radius:24px;background:white;display:grid;place-items:center;overflow:hidden}
+.qr-large svg{width:100%;height:100%;display:block}
 .contact{margin-top:20px}
 .contact-row{padding:11px 0;border-top:1px solid rgba(255,255,255,.06);display:flex;justify-content:space-between;gap:12px;font-size:11px}
 .contact-row span{color:var(--muted)}
@@ -196,16 +205,16 @@ button{cursor:pointer}
   .topbar{top:8px}
   .connected,.userbtn span:last-child{display:none}
   .main{padding:27px 1px 24px}
-  .hero{min-height:145px;padding:22px}
+  .hero{min-height:126px;padding:21px}
   .hero h1{font-size:34px}
   .hero p{font-size:13px}
   .hero-stat{display:none}
   .tile-grid{display:none}
   .mobile-list{display:block}
-  .mobile-tile{min-height:100px;border:1px solid var(--line);border-radius:21px;background:rgba(34,28,41,.92);display:grid;grid-template-columns:54px 1fr auto;align-items:center;gap:14px;padding:17px;color:white;text-decoration:none;margin-top:11px}
+  .mobile-tile{width:100%;min-height:112px;border:1px solid var(--line);border-radius:21px;background:rgba(34,28,41,.92);display:grid;grid-template-columns:54px 1fr auto;align-items:center;gap:14px;padding:18px;color:white;text-decoration:none;margin-top:11px;text-align:left;appearance:none;-webkit-appearance:none}
   .mobile-tile .icon{width:52px;height:52px;font-size:21px}
-  .mobile-tile strong{font-size:17px;display:block}
-  .mobile-tile small{font-size:11px;color:var(--muted);display:block;margin-top:5px}
+  .mobile-tile strong{font-size:18px;display:block}
+  .mobile-tile small{font-size:12px;color:var(--muted);display:block;margin-top:5px}
   .staff-row{grid-template-columns:1fr auto}
   .staff-row > :nth-child(2),.staff-row > :nth-child(3),.staff-row > :nth-child(4){display:none}
   .insight-grid{grid-template-columns:1fr 1fr}
@@ -393,7 +402,7 @@ function renderProfile(){
   avatar.textContent=init;userName.textContent=full;greeting.textContent=`Welcome back, ${profile.first_name}.`;
   drawerAvatar.textContent=init;drawerName.textContent=full;drawerPosition.textContent=profile.position||"";drawerDept.textContent=[profile.department,profile.site].filter(Boolean).join(" · ");
   drawerEmail.textContent=profile.email||"—";drawerPhone.textContent=profile.phone||"—";drawerRole.textContent=profile.role||"—";
-  buildQr(qrLarge,720,280);
+  buildQr(qrLarge,520,280);
 }
 
 function tileHtml(t){
@@ -408,14 +417,14 @@ function renderTiles(){
     const m=document.createElement("a");m.className="mobile-tile";m.href=a.url;m.target="_blank";m.rel="noopener";m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong><small>${a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date")}</small></div><div class="badge ${counts[a.key]?"warn":"ok"}">${a.external?"↗":counts[a.key]||"✓"}</div>`;m.onclick=()=>recordLaunch(a.key);mob.appendChild(m);
   });
 
-  const qr=document.createElement("button");qr.className="tile";qr.innerHTML=`<div class="tile-top"><div class="icon">▦</div><div id="qrTilePreview" class="qr-preview"></div></div><div><h2>My QR</h2><p>Contact card</p></div><div class="tile-bottom"><span>Ready to scan</span><strong>OPEN</strong></div>`;qr.onclick=openProfile;grid.appendChild(qr);
+  const qr=document.createElement("button");qr.className="tile";qr.innerHTML=`<div class="tile-top"><div class="icon">▦</div><div class="badge ok">✓</div></div><div class="qr-tile-body"><div id="qrTilePreview" class="qr-preview"></div><div><h2>My QR</h2><p>${profile.first_name} ${profile.last_name}<br>${profile.position||"Contact card"}</p></div></div><div class="tile-bottom"><span>Ready to scan</span><strong>SHOW CARD</strong></div>`;qr.onclick=openProfile;grid.appendChild(qr);
   const qm=document.createElement("button");qm.className="mobile-tile";qm.innerHTML=`<div class="icon">▦</div><div><strong>My QR</strong><small>Contact card</small></div><div class="badge ok">›</div>`;qm.onclick=openProfile;mob.appendChild(qm);
-  setTimeout(()=>buildQr(document.getElementById("qrTilePreview"),420,52),0);
+  setTimeout(()=>buildQr(document.getElementById("qrTilePreview"),240,58),0);
 
   if(profile.role==="admin"){
     const u=document.createElement("button");u.className="tile admin";u.innerHTML=tileHtml({key:"users",name:"User Management",icon:"👥",desc:"Staff access, PINs & permissions",action:"MANAGE"});u.onclick=openUsers;grid.appendChild(u);
     const um=document.createElement("button");um.className="mobile-tile";um.innerHTML=`<div class="icon">👥</div><div><strong>User Management</strong><small>Staff access & PINs</small></div><div class="badge ok">›</div>`;um.onclick=openUsers;mob.appendChild(um);
-    const i=document.createElement("button");i.className="tile admin";i.innerHTML=tileHtml({key:"insights",name:"AXIS Insights",icon:"◫",desc:"Logins, usage & adoption",action:"VIEW"});i.onclick=openInsights;grid.appendChild(i);
+    const i=document.createElement("button");i.className="tile admin";i.innerHTML=`<div class="tile-top"><div class="icon">◫</div><div class="badge ok">LIVE</div></div><div><h2>AXIS Insights</h2><p>Logins, usage & adoption</p><div class="insight-mini"><div class="insight-mini-row"><span>Appointments</span><div class="insight-mini-bar"><i style="width:78%"></i></div><b>↗</b></div><div class="insight-mini-row"><span>Delivery</span><div class="insight-mini-bar"><i style="width:52%"></i></div><b>↗</b></div></div></div><div class="tile-bottom"><span>Admin reporting</span><strong>VIEW</strong></div>`;i.onclick=openInsights;grid.appendChild(i);
     const im=document.createElement("button");im.className="mobile-tile";im.innerHTML=`<div class="icon">◫</div><div><strong>AXIS Insights</strong><small>Usage & adoption</small></div><div class="badge ok">›</div>`;im.onclick=openInsights;mob.appendChild(im);
   }
   updateSummary();
@@ -431,9 +440,39 @@ async function recordLaunch(key){await client.from("app_launches").insert({user_
 function vcard(){
  return ["BEGIN:VCARD","VERSION:3.0",`N:${profile.last_name||""};${profile.first_name||""};;;`,`FN:${profile.first_name} ${profile.last_name}`,`TITLE:${profile.position||""}`,`ORG:${profile.site||"AXIS"}`,profile.phone?`TEL;TYPE=CELL:${profile.phone}`:"",`EMAIL:${profile.email}`,"END:VCARD"].filter(Boolean).join("\n");
 }
+function qrPayload(){
+  // Keep the contact payload intentionally compact so the QR has larger,
+  // cleaner modules while still importing as a contact card.
+  return [
+    "BEGIN:VCARD",
+    "VERSION:3.0",
+    `N:${profile.last_name||""};${profile.first_name||""};;;`,
+    `FN:${profile.first_name} ${profile.last_name}`,
+    profile.phone ? `TEL:${profile.phone}` : "",
+    `EMAIL:${profile.email}`,
+    "END:VCARD"
+  ].filter(Boolean).join("\n");
+}
 function buildQr(box,renderSize,cssSize){
-  if(!box)return;box.innerHTML="";const holder=document.createElement("div");holder.style.width=cssSize+"px";holder.style.height=cssSize+"px";box.appendChild(holder);
-  try{new QRCode(holder,{text:vcard(),width:renderSize,height:renderSize,colorDark:"#111111",colorLight:"#ffffff",correctLevel:QRCode.CorrectLevel.H});setTimeout(()=>{const img=holder.querySelector("img");const canvas=holder.querySelector("canvas");if(img){img.style.width="100%";img.style.height="100%";img.style.display="block"}if(canvas){canvas.style.width="100%";canvas.style.height="100%"}},0)}catch(e){console.error(e)}
+  if(!box)return;
+  box.innerHTML="";
+  try{
+    const qr = new QRCode({
+      content: qrPayload(),
+      padding: 0,
+      width: renderSize,
+      height: renderSize,
+      color: "#111111",
+      background: "#ffffff",
+      ecl: "M",
+      join: true,
+      container: "svg-viewbox"
+    });
+    box.innerHTML = qr.svg();
+  }catch(e){
+    console.error("QR render failed",e);
+    box.textContent="QR";
+  }
 }
 
 function openProfile(){overlay.classList.remove("hidden");profileDrawer.classList.remove("hidden")}
