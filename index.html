@@ -241,12 +241,23 @@ button{cursor:pointer}
       <div class="login-form">
         <div class="field"><label>Email</label><input id="loginEmail" class="input" type="email" autocomplete="username"></div>
         <div class="field"><label>4-digit PIN</label><input id="loginPin" class="input" type="password" maxlength="4" inputmode="numeric"></div>
-        <button id="loginBtn" class="primary">ENTER AXIS</button>
+        <button id="loginBtn" class="primary">CONTINUE</button>
         <button id="forgotBtn" class="linkbtn">Forgot PIN?</button>
         <div id="loginFeedback" class="feedback"></div>
       </div>
     </div>
-    <div id="recoveryState" class="hidden">
+    
+    <div id="firstPinState" class="hidden">
+      <div class="wordmark">AXIS</div><div class="copy">© 2026</div>
+      <div class="recovery-title" id="firstPinTitle">Welcome to AXIS</div>
+      <div class="recovery-copy">Create your 4-digit PIN. You’ll use this with your work email from now on.</div>
+      <div class="field"><label>New 4-digit PIN</label><input id="firstPin" class="input" type="password" maxlength="4" inputmode="numeric" autocomplete="new-password"></div>
+      <div class="field"><label>Confirm PIN</label><input id="firstPinConfirm" class="input" type="password" maxlength="4" inputmode="numeric" autocomplete="new-password"></div>
+      <button id="createPinBtn" class="primary">CREATE PIN</button>
+      <button id="firstPinBackBtn" class="linkbtn">Use another email</button>
+      <div id="firstPinFeedback" class="feedback"></div>
+    </div>
+<div id="recoveryState" class="hidden">
       <div class="wordmark">AXIS</div><div class="copy">© 2026</div>
       <div class="recovery-title">Reset your PIN</div>
       <div class="recovery-copy">Enter your AXIS email and we’ll send recovery instructions.</div>
@@ -419,16 +430,174 @@ async function bootstrap(){
   }
 }
 
-async function doLogin(){
-  const email=document.getElementById("loginEmail").value.trim(),pin=document.getElementById("loginPin").value.trim(),fb=document.getElementById("loginFeedback");
-  if(!email||!/^[0-9]{4}$/.test(pin))return feedback(fb,"Enter your email and 4-digit PIN.","error");
-  feedback(fb,"Connecting…");
+async function establishAxisSession(payload){
+  const tokenHash=payload?.session?.token_hash;
+  const type=payload?.session?.type||"email";
+
+  if(!tokenHash) throw new Error("AXIS did not return a valid session.");
+
+  const {data,error}=await client.auth.verifyOtp({
+    token_hash:tokenHash,
+    type
+  });
+
+  if(error||!data?.session) throw new Error(error?.message||"Unable to start AXIS session.");
+
+  session=data.session;
+  localStorage.setItem(PIN_KEY,String(Date.now()));
+  await loadProfile();
+  await openAxis();
+}
+
+async function checkEmailStatus(){
+  const emailValue=email.value.trim().toLowerCase();
+  const fb=loginFeedback;
+
+  if(!emailValue){
+    feedback(fb,"Enter your work email.","error");
+    email.focus();
+    return;
+  }
+
+  loginBtn.disabled=true;
+  feedback(fb,"Checking AXIS access…");
+
   try{
-    const r=await fetch(LOGIN_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,pin})}),j=await r.json();
-    if(!r.ok||!j.token_hash)throw new Error(j.error||"Unable to sign in.");
-    const {data,error}=await client.auth.verifyOtp({token_hash:j.token_hash,type:j.verify_type||"email"});if(error||!data.session)throw new Error(error?.message||"Unable to establish session.");
-    session=data.session;await loadProfile();localStorage.setItem(PIN_KEY,String(Date.now()));document.getElementById("loginPin").value="";await openAxis();
-  }catch(e){feedback(fb,e.message||"Unable to sign in.","error")}
+    const r=await fetch(LOGIN_ENDPOINT,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:"status",email:emailValue})
+    });
+
+    let j={};
+    try{j=await r.json()}catch{}
+
+    if(!r.ok||!j.ok) throw new Error(j.error||"Unable to check AXIS access.");
+
+    if(j.setup_required||j.status==="PIN_NOT_SET"){
+      firstPinTitle.textContent=`Welcome${j.first_name ? ", "+j.first_name : ""}`;
+      firstPin.value="";
+      firstPinConfirm.value="";
+      loginState.classList.add("hidden");
+      firstPinState.classList.remove("hidden");
+      feedback(firstPinFeedback,"");
+      setTimeout(()=>firstPin.focus(),50);
+      return;
+    }
+
+    // Existing user: reveal/focus PIN and keep normal login flow.
+    pin.focus();
+    feedback(fb,"PIN ready.");
+  }catch(e){
+    feedback(fb,e?.message||"Unable to check AXIS access.","error");
+  }finally{
+    loginBtn.disabled=false;
+  }
+}
+
+async function doLogin(){
+  const emailValue=email.value.trim().toLowerCase();
+  const pinValue=pin.value.trim();
+  const fb=loginFeedback;
+
+  if(!emailValue){
+    feedback(fb,"Enter your work email.","error");
+    email.focus();
+    return;
+  }
+
+  // If PIN is blank, use the same button as a smart Continue action.
+  if(!pinValue){
+    await checkEmailStatus();
+    return;
+  }
+
+  if(!/^\d{4}$/.test(pinValue)){
+    feedback(fb,"Enter your 4-digit AXIS PIN.","error");
+    pin.focus();
+    return;
+  }
+
+  loginBtn.disabled=true;
+  feedback(fb,"Entering AXIS…");
+
+  try{
+    const r=await fetch(LOGIN_ENDPOINT,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        action:"login",
+        email:emailValue,
+        pin:pinValue
+      })
+    });
+
+    let j={};
+    try{j=await r.json()}catch{}
+
+    if(j?.code==="PIN_NOT_SET"||j?.setup_required){
+      firstPinTitle.textContent=`Welcome${j.first_name ? ", "+j.first_name : ""}`;
+      firstPin.value="";
+      firstPinConfirm.value="";
+      loginState.classList.add("hidden");
+      firstPinState.classList.remove("hidden");
+      feedback(firstPinFeedback,"");
+      return;
+    }
+
+    if(!r.ok||!j.ok) throw new Error(j.error||"Unable to enter AXIS.");
+
+    await establishAxisSession(j);
+  }catch(e){
+    feedback(fb,e?.message||"Unable to enter AXIS.","error");
+  }finally{
+    loginBtn.disabled=false;
+  }
+}
+
+async function createFirstPin(){
+  const emailValue=email.value.trim().toLowerCase();
+  const p1=firstPin.value.trim();
+  const p2=firstPinConfirm.value.trim();
+  const fb=firstPinFeedback;
+
+  if(!/^\d{4}$/.test(p1)){
+    feedback(fb,"PIN must be exactly 4 digits.","error");
+    firstPin.focus();
+    return;
+  }
+
+  if(p1!==p2){
+    feedback(fb,"The two PINs do not match.","error");
+    firstPinConfirm.focus();
+    return;
+  }
+
+  createPinBtn.disabled=true;
+  feedback(fb,"Creating your AXIS PIN…");
+
+  try{
+    const r=await fetch(LOGIN_ENDPOINT,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        action:"setup",
+        email:emailValue,
+        pin:p1
+      })
+    });
+
+    let j={};
+    try{j=await r.json()}catch{}
+
+    if(!r.ok||!j.ok) throw new Error(j.error||"Unable to create AXIS PIN.");
+
+    await establishAxisSession(j);
+  }catch(e){
+    feedback(fb,e?.message||"Unable to create AXIS PIN.","error");
+  }finally{
+    createPinBtn.disabled=false;
+  }
 }
 
 async function openAxis(){renderProfile();renderTiles();await refreshCounts();startTimer();show(document.getElementById("appView"))}
@@ -576,6 +745,7 @@ function showRecoveryPinScreen(){
   recoveryMode=true;
   document.getElementById("loginState").classList.add("hidden");
   document.getElementById("recoveryState").classList.add("hidden");
+  document.getElementById("firstPinState").classList.add("hidden");
   document.getElementById("newPinState").classList.remove("hidden");
   show(document.getElementById("loginView"));
   setTimeout(()=>document.getElementById("newPin").focus(),50);
@@ -643,6 +813,7 @@ async function saveRecoveredPin(){
     setTimeout(()=>{
       document.getElementById("newPinState").classList.add("hidden");
       document.getElementById("recoveryState").classList.add("hidden");
+      document.getElementById("firstPinState").classList.add("hidden");
       document.getElementById("loginState").classList.remove("hidden");
       show(document.getElementById("loginView"));
       feedback(
@@ -672,7 +843,19 @@ client.auth.onAuthStateChange((event,newSession)=>{
   }
 });
 
-loginBtn.onclick=doLogin;loginPin.onkeydown=e=>{if(e.key==="Enter")doLogin()};
+loginBtn.onclick=doLogin;
+createPinBtn.onclick=createFirstPin;
+firstPinConfirm.onkeydown=e=>{if(e.key==="Enter")createFirstPin()};
+firstPin.onkeydown=e=>{if(e.key==="Enter")firstPinConfirm.focus()};
+firstPinBackBtn.onclick=()=>{
+  firstPinState.classList.add("hidden");
+  loginState.classList.remove("hidden");
+  firstPin.value="";
+  firstPinConfirm.value="";
+  pin.value="";
+  feedback(firstPinFeedback,"");
+  setTimeout(()=>email.focus(),30);
+};loginPin.onkeydown=e=>{if(e.key==="Enter")doLogin()};
 forgotBtn.onclick=()=>{recoveryEmail.value=loginEmail.value;loginState.classList.add("hidden");recoveryState.classList.remove("hidden")};
 backBtn.onclick=()=>{recoveryState.classList.add("hidden");loginState.classList.remove("hidden")};recoveryBtn.onclick=forgot;
 saveNewPinBtn.onclick=saveRecoveredPin;
