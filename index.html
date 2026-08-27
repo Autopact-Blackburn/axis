@@ -378,6 +378,7 @@ const LOGIN_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-login";
 const ADMIN_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-admin";
 const FORGOT_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-forgot-pin";
 const RESET_PIN_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-reset-pin";
+const SSO_LAUNCH_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-sso-launch";
 const PIN_WINDOW=30*24*60*60*1000, PIN_KEY="axis_pin_authenticated_at";
 
 const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
@@ -617,11 +618,64 @@ function tileHtml(t){
   return `<div class="tile-top"><div class="icon">${t.icon}</div><div class="badge ${cls}">${right}</div></div><div><h2>${t.name}</h2><p>${t.desc}</p></div><div class="tile-bottom"><span>${status}</span><strong>${t.action||"OPEN ↗"}</strong></div>`;
 }
 
+
+async function launchAxisApp(a,event){
+  if(a.key!=="appointments") return;
+
+  event.preventDefault();
+
+  // Open the destination tab immediately so browsers do not block it
+  // while AXIS obtains the short-lived SSO token.
+  const target=window.open("about:blank","_blank");
+  if(target){
+    try{
+      target.document.title="Opening Appointments…";
+      target.document.body.innerHTML='<div style="font-family:system-ui,-apple-system,sans-serif;background:#15111c;color:#fff;min-height:100vh;display:grid;place-items:center;margin:0"><div style="text-align:center"><div style="font-size:28px;font-weight:800;letter-spacing:.18em">AXIS</div><div style="margin-top:14px;opacity:.65">Opening Appointments…</div></div></div>';
+    }catch{}
+  }
+
+  try{
+    const {data:{session:liveSession},error:sessionError}=await client.auth.getSession();
+    if(sessionError||!liveSession?.access_token) throw new Error("Your AXIS session has expired. Please sign in again.");
+
+    const r=await fetch(SSO_LAUNCH_ENDPOINT,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer "+liveSession.access_token
+      },
+      body:JSON.stringify({app:"appointments"})
+    });
+
+    let j={};
+    try{j=await r.json()}catch{}
+
+    if(!r.ok||!j.ok||!j.launch_token){
+      throw new Error(j.error||"Unable to open Appointments through AXIS.");
+    }
+
+    recordLaunch(a.key);
+
+    const destination=new URL(a.url);
+    destination.searchParams.set("axis_token",j.launch_token);
+
+    if(target){
+      target.location.replace(destination.toString());
+    }else{
+      window.location.href=destination.toString();
+    }
+  }catch(e){
+    if(target) target.close();
+    console.error("AXIS Appointments launch failed:",e);
+    alert(e?.message||"Unable to open Appointments through AXIS.");
+  }
+}
+
 function renderTiles(){
   const grid=document.getElementById("tileGrid"),mob=document.getElementById("mobileList");grid.innerHTML="";mob.innerHTML="";
   apps.filter(a=>profile[a.field]).forEach(a=>{
-    const el=document.createElement("a");el.className="tile";el.href=a.url;el.target="_blank";el.rel="noopener";el.innerHTML=tileHtml(a);el.onclick=()=>recordLaunch(a.key);grid.appendChild(el);
-    const m=document.createElement("a");m.className="mobile-tile";m.href=a.url;m.target="_blank";m.rel="noopener";m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong><small>${a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date")}</small></div><div class="badge ${counts[a.key]?"warn":"ok"}">${a.external?"↗":counts[a.key]||"✓"}</div>`;m.onclick=()=>recordLaunch(a.key);mob.appendChild(m);
+    const el=document.createElement("a");el.className="tile";el.href=a.url;el.target="_blank";el.rel="noopener";el.innerHTML=tileHtml(a);el.onclick=(event)=>a.key==="appointments"?launchAxisApp(a,event):recordLaunch(a.key);grid.appendChild(el);
+    const m=document.createElement("a");m.className="mobile-tile";m.href=a.url;m.target="_blank";m.rel="noopener";m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong><small>${a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date")}</small></div><div class="badge ${counts[a.key]?"warn":"ok"}">${a.external?"↗":counts[a.key]||"✓"}</div>`;m.onclick=(event)=>a.key==="appointments"?launchAxisApp(a,event):recordLaunch(a.key);mob.appendChild(m);
   });
 
   const qr=document.createElement("button");qr.className="tile";qr.innerHTML=`<div class="tile-top"><div class="icon">▦</div><div class="badge ok">✓</div></div><div class="qr-tile-body"><div id="qrTilePreview" class="qr-preview"></div><div><h2>My QR</h2><p>${profile.first_name} ${profile.last_name}<br>${profile.position||"Contact card"}</p></div></div><div class="tile-bottom"><span>Ready to scan</span><strong>SHOW CARD</strong></div>`;qr.onclick=openProfile;grid.appendChild(qr);
