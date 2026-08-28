@@ -523,12 +523,12 @@ button{cursor:pointer}
 
 <section id="leagueModal" class="modal hidden">
   <div class="modal-head">
-    <div><h2>AXIS League</h2><p id="leaguePeriod">Monthly system usage · users only</p></div>
+    <div><h2>AXIS League</h2><p id="leaguePeriod">Monthly AXIS + appointment performance · users only</p></div>
     <button id="closeLeague" class="close">×</button>
   </div>
   <div id="leagueSummary" class="insight-grid"></div>
   <div id="leagueList" class="league-list"></div>
-  <div class="score-note">AXIS Score rewards useful launcher adoption with daily caps. Managers and Admin are tracked in Insights but are excluded from the League.</div>
+  <div class="score-note">AXIS Score combines useful launcher adoption with Appointment Tracker performance. Managers and Admin are tracked in Insights but are excluded from the League.</div>
 </section>
 
 <section id="insightsModal" class="modal hidden">
@@ -555,6 +555,7 @@ const ADMIN_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-admin";
 const FORGOT_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-forgot-pin";
 const RESET_PIN_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-reset-pin";
 const SSO_LAUNCH_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-sso-launch";
+const APPOINTMENT_INSIGHTS_ENDPOINT=SUPABASE_URL+"/functions/v1/appointment-insights";
 const PIN_WINDOW=30*24*60*60*1000, PIN_KEY="axis_pin_authenticated_at";
 
 const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
@@ -807,24 +808,60 @@ function scoreLaunches(rows){
 }
 async function loadAxisLeague(){
   try{
-    const [pRes,lRes]=await Promise.all([
-      client.from("profiles").select("id,first_name,last_name,role,active"),
-      client.from("app_launches").select("user_id,app_key,launched_at").order("launched_at",{ascending:false}).limit(5000)
+    const {data:{session:liveLeagueSession}}=await client.auth.getSession();
+
+    const [pRes,lRes,appointmentRes]=await Promise.all([
+      client.from("profiles").select("id,first_name,last_name,email,role,active"),
+      client.from("app_launches").select("user_id,app_key,launched_at").order("launched_at",{ascending:false}).limit(5000),
+      liveLeagueSession?.access_token
+        ? fetch(APPOINTMENT_INSIGHTS_ENDPOINT,{
+            method:"POST",
+            headers:{
+              "Content-Type":"application/json",
+              "Authorization":"Bearer "+liveLeagueSession.access_token
+            },
+            body:JSON.stringify({month:new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Melbourne",year:"numeric",month:"2-digit"})})
+          }).then(async r=>{
+            let j={};
+            try{j=await r.json()}catch{}
+            if(!r.ok||!j.ok)throw new Error(j.error||"Appointment insights unavailable.");
+            return j;
+          })
+        : Promise.resolve({users:[]})
     ]);
+
     if(pRes.error)throw pRes.error;if(lRes.error)throw lRes.error;
+
     const profiles=pRes.data||[],launches=lRes.data||[],start=new Date(monthStartIso());
+    const appointmentByEmail=new Map(
+      (appointmentRes?.users||[])
+        .filter(x=>x?.email)
+        .map(x=>[String(x.email).trim().toLowerCase(),x])
+    );
+
     const userProfiles=profiles.filter(p=>p.active&&p.role==="user");
     leagueRows=userProfiles.map(p=>{
       const all=launches.filter(x=>String(x.user_id)===String(p.id));
       const monthly=all.filter(x=>new Date(x.launched_at)>=start);
+      const appointment=appointmentByEmail.get(String(p.email||"").trim().toLowerCase())||null;
+      const usageScore=scoreLaunches(monthly);
+      const appointmentScore=Number(appointment?.operational_score||0);
+
       return{
-        id:p.id,name:`${p.first_name||""} ${p.last_name||""}`.trim(),
-        monthlyScore:scoreLaunches(monthly),lifetimeScore:scoreLaunches(all),
-        launches:monthly.length
+        id:p.id,
+        name:`${p.first_name||""} ${p.last_name||""}`.trim(),
+        monthlyScore:usageScore+appointmentScore,
+        lifetimeScore:scoreLaunches(all),
+        launches:monthly.length,
+        usageScore,
+        appointmentScore,
+        appointmentMetrics:appointment?.metrics||null
       };
     }).sort((a,b)=>b.monthlyScore-a.monthlyScore||b.launches-a.launches||a.name.localeCompare(b.name));
+
     leagueRows.forEach((r,i)=>r.rank=i+1);
     myLeague=profile?.role==="user"?leagueRows.find(x=>String(x.id)===String(profile.id))||null:null;
+
     if(myLeague){
       const allMine=launches.filter(x=>String(x.user_id)===String(profile.id));
       scoreData={month:myLeague.monthlyScore,lifetime:scoreLaunches(allMine),rank:myLeague.rank,launches:myLeague.launches};
@@ -832,6 +869,7 @@ async function loadAxisLeague(){
       const allMine=launches.filter(x=>String(x.user_id)===String(profile?.id));
       scoreData={month:scoreLaunches(allMine.filter(x=>new Date(x.launched_at)>=start)),lifetime:scoreLaunches(allMine),rank:null,launches:allMine.filter(x=>new Date(x.launched_at)>=start).length};
     }
+
     renderScoreChip();
   }catch(e){console.warn("AXIS League unavailable",e)}
 }
@@ -853,11 +891,11 @@ function renderLeagueTileHtml(){
 }
 function openLeague(){
   overlay.classList.remove("hidden");leagueModal.classList.remove("hidden");
-  leaguePeriod.textContent=`${monthLabelNow()} · Monthly system usage · users only`;
+  leaguePeriod.textContent=`${monthLabelNow()} · AXIS + appointment performance · users only`;
   leagueSummary.innerHTML=profile.role==="user"
     ?`<div class="stat"><strong>${scoreData.month}</strong><span>Your Monthly Score</span></div><div class="stat"><strong>${scoreData.rank?"#"+scoreData.rank:"—"}</strong><span>Your Rank</span></div><div class="stat"><strong>${scoreData.lifetime}</strong><span>Lifetime Score</span></div><div class="stat"><strong>${scoreData.launches}</strong><span>Monthly Launches</span></div>`
     :`<div class="stat"><strong>${leagueRows.length}</strong><span>League Users</span></div><div class="stat"><strong>${leagueRows.reduce((a,b)=>a+b.monthlyScore,0)}</strong><span>Total Monthly Score</span></div><div class="stat"><strong>${leagueRows.reduce((a,b)=>a+b.launches,0)}</strong><span>Monthly Launches</span></div><div class="stat"><strong>${leagueRows[0]?.monthlyScore||0}</strong><span>Leading Score</span></div>`;
-  leagueList.innerHTML=leagueRows.map(r=>`<div class="league-row ${String(r.id)===String(profile.id)?"me":""}"><div class="league-rank">#${r.rank}</div><div class="league-name"><strong>${r.name}</strong><small>${String(r.id)===String(profile.id)?"You · ":""}AXIS user</small></div><div class="league-score"><strong>${r.monthlyScore}</strong><span>Score</span></div><div class="league-launches"><strong>${r.launches}</strong><span>Launches</span></div></div>`).join("")||"<div class='report-row'><span>No user activity recorded this month.</span></div>";
+  leagueList.innerHTML=leagueRows.map(r=>`<div class="league-row ${String(r.id)===String(profile.id)?"me":""}"><div class="league-rank">#${r.rank}</div><div class="league-name"><strong>${r.name}</strong><small>${r.appointmentMetrics?`${r.appointmentMetrics.appointments||0} App · ${r.appointmentMetrics.shown||0} Show · ${r.appointmentMetrics.test_drives||0} TD · ${r.appointmentMetrics.sold||0} Sold`:(String(r.id)===String(profile.id)?"You · ":"")+"AXIS user"}</small></div><div class="league-score"><strong>${r.monthlyScore}</strong><span>Score</span></div><div class="league-launches"><strong>${r.launches}</strong><span>Launches</span></div></div>`).join("")||"<div class='report-row'><span>No user activity recorded this month.</span></div>";
 }
 
 function weatherEmoji(code,wind){
