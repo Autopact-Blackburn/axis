@@ -311,8 +311,23 @@ button{cursor:pointer}
 .modal-toolbar .search{margin-top:0;flex:1}
 .add-help{font-size:9px;color:var(--muted);line-height:1.5;margin-top:11px}
 .score-note{font-size:9px;color:var(--muted);line-height:1.55;margin-top:14px}
+.league-entry{border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.025);overflow:hidden}
+.league-entry.me{border-color:rgba(181,158,255,.34);background:rgba(141,107,255,.075)}
+.league-entry .league-row{border:0;border-radius:0;background:transparent;width:100%;text-align:left;color:inherit}
+.league-entry .league-row:hover{background:rgba(255,255,255,.025)}
+.league-entry .league-row:focus-visible{outline:2px solid rgba(181,158,255,.65);outline-offset:-2px}
+.league-chevron{font-size:12px;color:var(--muted);transition:transform .18s ease}
+.league-entry.open .league-chevron{transform:rotate(180deg)}
+.league-detail{display:none;padding:0 15px 14px 81px;border-top:1px solid rgba(255,255,255,.055)}
+.league-entry.open .league-detail{display:block}
+.league-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding-top:12px}
+.league-detail-card{padding:9px 10px;border:1px solid rgba(255,255,255,.06);border-radius:11px;background:rgba(255,255,255,.02)}
+.league-detail-card strong{display:block;font-size:12px}.league-detail-card span{display:block;margin-top:2px;font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.league-detail-copy{font-size:9px;color:var(--muted);line-height:1.55;margin-top:9px}
 @media(max-width:700px){
-  .league-row{grid-template-columns:42px minmax(0,1fr) 76px}.league-launches{display:none}
+  .league-row{grid-template-columns:42px minmax(0,1fr) 76px 18px}.league-launches{display:none}
+  .league-detail{padding:0 12px 12px 54px}
+  .league-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .league-score strong{font-size:12px}
   .modal-toolbar{align-items:stretch;flex-direction:column}.add-staff-btn{width:100%}
 }
@@ -528,7 +543,7 @@ button{cursor:pointer}
   </div>
   <div id="leagueSummary" class="insight-grid"></div>
   <div id="leagueList" class="league-list"></div>
-  <div class="score-note">AXIS Score combines useful launcher adoption with Appointment Tracker performance. Managers and Admin are tracked in Insights but are excluded from the League.</div>
+  <div class="score-note">AXIS Score combines useful launcher adoption with Appointment Tracker performance. Oracle monthly deal flow is shown for context and is not yet scored. Managers and Admin are excluded from the League.</div>
 </section>
 
 <section id="insightsModal" class="modal hidden">
@@ -556,6 +571,8 @@ const FORGOT_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-forgot-pin";
 const RESET_PIN_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-reset-pin";
 const SSO_LAUNCH_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-sso-launch";
 const APPOINTMENT_INSIGHTS_ENDPOINT=SUPABASE_URL+"/functions/v1/appointment-insights";
+const LEAGUE_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-league";
+const CREATE_USER_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-admin-create-user";
 const PIN_WINDOW=30*24*60*60*1000, PIN_KEY="axis_pin_authenticated_at";
 
 const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
@@ -809,69 +826,39 @@ function scoreLaunches(rows){
 async function loadAxisLeague(){
   try{
     const {data:{session:liveLeagueSession}}=await client.auth.getSession();
+    if(!liveLeagueSession?.access_token)throw new Error("AXIS session expired.");
 
-    const [pRes,lRes,appointmentRes]=await Promise.all([
-      client.from("profiles").select("id,first_name,last_name,email,role,active"),
-      client.from("app_launches").select("user_id,app_key,launched_at").order("launched_at",{ascending:false}).limit(5000),
-      liveLeagueSession?.access_token
-        ? fetch(APPOINTMENT_INSIGHTS_ENDPOINT,{
-            method:"POST",
-            headers:{
-              "Content-Type":"application/json",
-              "Authorization":"Bearer "+liveLeagueSession.access_token
-            },
-            body:JSON.stringify({month:new Date().toLocaleDateString("en-CA",{timeZone:"Australia/Melbourne",year:"numeric",month:"2-digit"})})
-          }).then(async r=>{
-            let j={};
-            try{j=await r.json()}catch{}
-            if(!r.ok||!j.ok)throw new Error(j.error||"Appointment insights unavailable.");
-            return j;
-          })
-        : Promise.resolve({users:[]})
-    ]);
+    const r=await fetch(LEAGUE_ENDPOINT,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer "+liveLeagueSession.access_token
+      },
+      body:JSON.stringify({})
+    });
 
-    if(pRes.error)throw pRes.error;if(lRes.error)throw lRes.error;
+    let j={};
+    try{j=await r.json()}catch{}
+    if(!r.ok||!j.ok)throw new Error(j.error||"AXIS League unavailable.");
 
-    const profiles=pRes.data||[],launches=lRes.data||[],start=new Date(monthStartIso());
-    const appointmentByEmail=new Map(
-      (appointmentRes?.users||[])
-        .filter(x=>x?.email)
-        .map(x=>[String(x.email).trim().toLowerCase(),x])
-    );
-
-    const userProfiles=profiles.filter(p=>p.active&&p.role==="user");
-    leagueRows=userProfiles.map(p=>{
-      const all=launches.filter(x=>String(x.user_id)===String(p.id));
-      const monthly=all.filter(x=>new Date(x.launched_at)>=start);
-      const appointment=appointmentByEmail.get(String(p.email||"").trim().toLowerCase())||null;
-      const usageScore=scoreLaunches(monthly);
-      const appointmentScore=Number(appointment?.operational_score||0);
-
-      return{
-        id:p.id,
-        name:`${p.first_name||""} ${p.last_name||""}`.trim(),
-        monthlyScore:usageScore+appointmentScore,
-        lifetimeScore:scoreLaunches(all),
-        launches:monthly.length,
-        usageScore,
-        appointmentScore,
-        appointmentMetrics:appointment?.metrics||null
-      };
-    }).sort((a,b)=>b.monthlyScore-a.monthlyScore||b.launches-a.launches||a.name.localeCompare(b.name));
-
-    leagueRows.forEach((r,i)=>r.rank=i+1);
+    leagueRows=Array.isArray(j.users)?j.users:[];
     myLeague=profile?.role==="user"?leagueRows.find(x=>String(x.id)===String(profile.id))||null:null;
 
     if(myLeague){
-      const allMine=launches.filter(x=>String(x.user_id)===String(profile.id));
-      scoreData={month:myLeague.monthlyScore,lifetime:scoreLaunches(allMine),rank:myLeague.rank,launches:myLeague.launches};
+      scoreData={
+        month:Number(myLeague.monthlyScore||0),
+        lifetime:Number(myLeague.lifetimeScore||0),
+        rank:myLeague.rank||null,
+        launches:Number(myLeague.launches||0)
+      };
     }else{
-      const allMine=launches.filter(x=>String(x.user_id)===String(profile?.id));
-      scoreData={month:scoreLaunches(allMine.filter(x=>new Date(x.launched_at)>=start)),lifetime:scoreLaunches(allMine),rank:null,launches:allMine.filter(x=>new Date(x.launched_at)>=start).length};
+      scoreData={month:0,lifetime:0,rank:null,launches:0};
     }
 
     renderScoreChip();
-  }catch(e){console.warn("AXIS League unavailable",e)}
+  }catch(e){
+    console.warn("AXIS League unavailable",e);
+  }
 }
 function renderScoreChip(){
   const points=document.getElementById("axisPoints"),rank=document.getElementById("axisRank");
@@ -887,15 +874,55 @@ function renderScoreChip(){
 function renderLeagueTileHtml(){
   const top=leagueRows.slice(0,3);
   const pod=top.map(r=>`<div class="league-mini"><b>#${r.rank} ${r.name.split(" ")[0]}</b><span>${r.monthlyScore} score</span></div>`).join("");
-  return `<div class="tile-top"><div class="icon">🏁</div><div class="badge ok">${leagueRows.length}</div></div><div><h2>AXIS League</h2><p>${monthLabelNow()} · users only</p><div class="league-podium">${pod||"<div class='league-mini'><b>League</b><span>Building...</span></div>"}</div></div><div class="tile-bottom"><span>${profile.role==="user"&&myLeague?`Your rank #${myLeague.rank}`:"Monthly usage"}</span><strong>VIEW LEAGUE</strong></div>`;
+  return `<div class="tile-top"><div class="icon">🏁</div><div class="badge ok">${leagueRows.length}</div></div><div><h2>AXIS League</h2><p>${monthLabelNow()} · users only</p><div class="league-podium">${pod||"<div class='league-mini'><b>League</b><span>Building...</span></div>"}</div></div><div class="tile-bottom"><span>${profile.role==="user"&&myLeague?`Your rank #${myLeague.rank}`:"Monthly performance"}</span><strong>VIEW LEAGUE</strong></div>`;
+}
+function leagueAppointmentLine(r){
+  const m=r.appointmentMetrics;
+  return m?`${m.appointments||0} App · ${m.shown||0} Show · ${m.test_drives||0} TD · ${m.sold||0} Sold`:"No appointment activity";
+}
+function leagueOracleLine(r){
+  const o=r.oracleMetrics;
+  return o?`${o.signed||0} Signed · ${o.delivered||0} Delivered · ${o.expected||0} Expected · ${o.cancelled||0} Cancelled · ${o.unique_qualifying_deals||0} Unique`:"No Oracle monthly deal activity";
+}
+function leagueDetailHtml(r){
+  const a=r.appointmentMetrics||{};
+  const o=r.oracleMetrics||{};
+  return `<div class="league-detail-grid">
+    <div class="league-detail-card"><strong>${r.usageScore||0}</strong><span>AXIS Usage Score</span></div>
+    <div class="league-detail-card"><strong>${r.appointmentScore||0}</strong><span>Appointment Score</span></div>
+    <div class="league-detail-card"><strong>${r.monthlyScore||0}</strong><span>Total AXIS Score</span></div>
+    <div class="league-detail-card"><strong>${a.appointments||0}</strong><span>Appointments</span></div>
+    <div class="league-detail-card"><strong>${a.shown||0}</strong><span>Shows</span></div>
+    <div class="league-detail-card"><strong>${a.test_drives||0}</strong><span>Test Drives</span></div>
+    <div class="league-detail-card"><strong>${a.sold||0}</strong><span>Appointment Sold</span></div>
+    <div class="league-detail-card"><strong>${o.unique_qualifying_deals||0}</strong><span>Oracle Unique Deals</span></div>
+    <div class="league-detail-card"><strong>${o.delivered||0}</strong><span>Oracle Delivered</span></div>
+  </div><div class="league-detail-copy">Oracle: ${leagueOracleLine(r)}. Oracle deal flow is visible for context but is not included in the score yet.</div>`;
+}
+function toggleLeagueEntry(id){
+  const entry=document.getElementById(`league-entry-${id}`);
+  if(entry)entry.classList.toggle("open");
 }
 function openLeague(){
   overlay.classList.remove("hidden");leagueModal.classList.remove("hidden");
-  leaguePeriod.textContent=`${monthLabelNow()} · AXIS + appointment performance · users only`;
+  leaguePeriod.textContent=`${monthLabelNow()} · AXIS + appointment performance + Oracle deal flow · users only`;
   leagueSummary.innerHTML=profile.role==="user"
-    ?`<div class="stat"><strong>${scoreData.month}</strong><span>Your Monthly Score</span></div><div class="stat"><strong>${scoreData.rank?"#"+scoreData.rank:"—"}</strong><span>Your Rank</span></div><div class="stat"><strong>${scoreData.lifetime}</strong><span>Lifetime Score</span></div><div class="stat"><strong>${scoreData.launches}</strong><span>Monthly Launches</span></div>`
-    :`<div class="stat"><strong>${leagueRows.length}</strong><span>League Users</span></div><div class="stat"><strong>${leagueRows.reduce((a,b)=>a+b.monthlyScore,0)}</strong><span>Total Monthly Score</span></div><div class="stat"><strong>${leagueRows.reduce((a,b)=>a+b.launches,0)}</strong><span>Monthly Launches</span></div><div class="stat"><strong>${leagueRows[0]?.monthlyScore||0}</strong><span>Leading Score</span></div>`;
-  leagueList.innerHTML=leagueRows.map(r=>`<div class="league-row ${String(r.id)===String(profile.id)?"me":""}"><div class="league-rank">#${r.rank}</div><div class="league-name"><strong>${r.name}</strong><small>${r.appointmentMetrics?`${r.appointmentMetrics.appointments||0} App · ${r.appointmentMetrics.shown||0} Show · ${r.appointmentMetrics.test_drives||0} TD · ${r.appointmentMetrics.sold||0} Sold`:(String(r.id)===String(profile.id)?"You · ":"")+"AXIS user"}</small></div><div class="league-score"><strong>${r.monthlyScore}</strong><span>Score</span></div><div class="league-launches"><strong>${r.launches}</strong><span>Launches</span></div></div>`).join("")||"<div class='report-row'><span>No user activity recorded this month.</span></div>";
+    ?`<div class="stat"><strong>${scoreData.month}</strong><span>Your Monthly Score</span></div><div class="stat"><strong>${scoreData.rank?"#"+scoreData.rank:"—"}</strong><span>Your Rank</span></div><div class="stat"><strong>${scoreData.lifetime}</strong><span>Lifetime Usage Score</span></div><div class="stat"><strong>${scoreData.launches}</strong><span>Monthly Launches</span></div>`
+    :`<div class="stat"><strong>${leagueRows.length}</strong><span>League Users</span></div><div class="stat"><strong>${leagueRows.reduce((a,b)=>a+Number(b.monthlyScore||0),0)}</strong><span>Total Monthly Score</span></div><div class="stat"><strong>${leagueRows.reduce((a,b)=>a+Number(b.launches||0),0)}</strong><span>Monthly Launches</span></div><div class="stat"><strong>${leagueRows[0]?.monthlyScore||0}</strong><span>Leading Score</span></div>`;
+
+  leagueList.innerHTML=leagueRows.map(r=>{
+    const me=String(r.id)===String(profile.id);
+    return `<div id="league-entry-${r.id}" class="league-entry ${me?"me":""}">
+      <button class="league-row" type="button" onclick="toggleLeagueEntry('${r.id}')">
+        <div class="league-rank">#${r.rank}</div>
+        <div class="league-name"><strong>${r.name}</strong><small>${leagueAppointmentLine(r)} · ${r.oracleMetrics?`${r.oracleMetrics.unique_qualifying_deals||0} Oracle Deals`:"0 Oracle Deals"}</small></div>
+        <div class="league-score"><strong>${r.monthlyScore}</strong><span>Score</span></div>
+        <div class="league-launches"><strong>${r.launches}</strong><span>Launches</span></div>
+        <div class="league-chevron">⌄</div>
+      </button>
+      <div class="league-detail">${leagueDetailHtml(r)}</div>
+    </div>`;
+  }).join("")||"<div class='report-row'><span>No user activity recorded this month.</span></div>";
 }
 
 function weatherEmoji(code,wind){
@@ -1135,6 +1162,12 @@ async function adminCall(payload){
   const r=await fetch(ADMIN_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(payload)}),j=await r.json();
   if(!r.ok||!j.ok)throw new Error(j.error||"Admin action failed.");return j;
 }
+async function createUserCall(payload){
+  const {data}=await client.auth.getSession();const token=data.session?.access_token;if(!token)throw new Error("AXIS session expired.");
+  const r=await fetch(CREATE_USER_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(payload)});
+  let j={};try{j=await r.json()}catch{}
+  if(!r.ok||!j.ok)throw new Error(j.error||"Unable to create staff member.");return j;
+}
 
 
 function openAddStaff(){
@@ -1157,7 +1190,7 @@ async function createStaff(){
       site:"Blackburn",role:aRole.value
     };
     document.querySelectorAll(".add-access").forEach(b=>payload[b.dataset.access]=b.classList.contains("on"));
-    await adminCall(payload);
+    await createUserCall(payload);
     feedback(addStaffFeedback,"Staff member created. They can now set their AXIS PIN on first sign-in.","success");
     await loadStaff();
     setTimeout(()=>{closeAddStaffModal();renderStaff(staff)},650);
