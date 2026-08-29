@@ -332,6 +332,46 @@ button{cursor:pointer}
   .modal-toolbar{align-items:stretch;flex-direction:column}.add-staff-btn{width:100%}
 }
 
+
+/* Admin-only Monthly Flow trial */
+.tile[data-app="flow"],.mobile-tile[data-app="flow"]{
+  border-color:rgba(255,146,94,.30)!important;
+  box-shadow:0 20px 60px rgba(255,146,94,.10),inset 4px 0 0 rgba(255,146,94,.72)!important
+}
+.tile[data-app="flow"] .icon{
+  border-color:rgba(255,146,94,.46);
+  background:rgba(255,146,94,.11);
+  box-shadow:0 0 28px rgba(255,146,94,.15)
+}
+.flow-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:18px;flex-wrap:wrap}
+.flow-toggle{display:flex;gap:6px;padding:4px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.025)}
+.flow-toggle button{height:38px;padding:0 14px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:9px;font-weight:900;letter-spacing:.06em}
+.flow-toggle button.on{background:rgba(141,107,255,.18);color:#fff}
+.flow-select{height:46px;min-width:230px;border:1px solid var(--line);border-radius:13px;background:#211a28;color:#fff;padding:0 12px;outline:none}
+.flow-hand{margin-top:16px;padding:17px 18px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.025)}
+.flow-hand[data-level="good"]{border-color:rgba(109,214,164,.30);background:rgba(109,214,164,.055)}
+.flow-hand[data-level="watch"]{border-color:rgba(242,184,92,.32);background:rgba(242,184,92,.06)}
+.flow-hand[data-level="bad"]{border-color:rgba(255,107,120,.36);background:rgba(255,107,120,.07)}
+.flow-hand strong{display:block;font-size:15px;letter-spacing:.02em}
+.flow-hand p{margin:6px 0 0;color:#d8d1dd;font-size:11px;line-height:1.55}
+.flow-chart-wrap{margin-top:16px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.018);overflow-x:auto;overflow-y:hidden}
+.flow-chart{display:block;height:330px;min-width:100%}
+.flow-axis{font-size:10px;fill:#8f8797}
+.flow-grid{stroke:rgba(255,255,255,.075);stroke-width:1}
+.flow-today{stroke:rgba(242,184,92,.60);stroke-width:1.5;stroke-dasharray:5 5}
+.flow-bar{fill:rgba(141,107,255,.72)}
+.flow-line{fill:none;stroke:#b59eff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.flow-dot{fill:#f7f4fa;stroke:#8d6bff;stroke-width:2}
+.flow-empty{padding:50px 20px;text-align:center;color:var(--muted);font-size:12px}
+.flow-foot{margin-top:12px;color:var(--muted);font-size:9px;line-height:1.5}
+@media(max-width:700px){
+  .flow-toolbar{align-items:stretch}
+  .flow-select{width:100%;min-width:0}
+  .flow-toggle{width:100%}
+  .flow-toggle button{flex:1}
+  .flow-chart{height:300px}
+}
+
 .mobile-list{display:none}
 
 @media(max-width:1100px){
@@ -546,6 +586,24 @@ button{cursor:pointer}
   <div class="score-note">AXIS Score combines useful launcher adoption with Appointment Tracker performance. Oracle monthly deal flow is shown for context and is not yet scored. Managers and Admin are excluded from the League.</div>
 </section>
 
+<section id="flowModal" class="modal hidden">
+  <div class="modal-head">
+    <div><h2>Monthly Flow</h2><p id="flowPeriod">Admin trial · Oracle sign-up rhythm</p></div>
+    <button id="closeFlow" class="close">×</button>
+  </div>
+  <div id="flowSummary" class="insight-grid"></div>
+  <div class="flow-toolbar">
+    <select id="flowPerson" class="flow-select" aria-label="Salesperson"></select>
+    <div class="flow-toggle" aria-label="Chart view">
+      <button id="flowDailyBtn" type="button" class="on">DAILY</button>
+      <button id="flowCumulativeBtn" type="button">CUMULATIVE</button>
+    </div>
+  </div>
+  <div id="flowHand" class="flow-hand" data-level="watch"></div>
+  <div id="flowChartWrap" class="flow-chart-wrap"></div>
+  <div class="flow-foot">Working days exclude Sundays. Victorian public-holiday exclusions are applied from the local holiday list in this trial.</div>
+</section>
+
 <section id="insightsModal" class="modal hidden">
   <div class="modal-head">
     <div><h2>AXIS Insights</h2><p>Usage and adoption reporting</p></div>
@@ -572,6 +630,7 @@ const RESET_PIN_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-reset-pin";
 const SSO_LAUNCH_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-sso-launch";
 const APPOINTMENT_INSIGHTS_ENDPOINT=SUPABASE_URL+"/functions/v1/appointment-insights";
 const LEAGUE_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-league";
+const ORACLE_INSIGHTS_ENDPOINT=SUPABASE_URL+"/functions/v1/oracle-insights";
 const CREATE_USER_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-admin-create-user";
 const PIN_WINDOW=30*24*60*60*1000, PIN_KEY="axis_pin_authenticated_at";
 
@@ -579,6 +638,7 @@ const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{
 let profile=null,session=null,counts={},timer=null,staff=[],editing=null;
 let recoveryMode=false;
 let leagueRows=[],myLeague=null,scoreData={month:0,lifetime:0,rank:null,launches:0};
+let flowUsers=[],flowMonth="",flowView="daily";
 
 const apps=[
   {key:"appointments",name:"Appointments",icon:"📅",desc:"Appointment control",url:"https://autopact-blackburn.github.io/Blackburn-Appointment-Tracker/",field:"appointment_access"},
@@ -925,6 +985,184 @@ function openLeague(){
   }).join("")||"<div class='report-row'><span>No user activity recorded this month.</span></div>";
 }
 
+
+const VIC_PUBLIC_HOLIDAYS=new Set([
+  "2026-01-01","2026-01-26","2026-03-09","2026-04-03","2026-04-04","2026-04-05","2026-04-06",
+  "2026-04-25","2026-06-08","2026-09-25","2026-11-03","2026-12-25","2026-12-26","2026-12-28"
+]);
+
+function melbourneTodayKey(){
+  const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Australia/Melbourne",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(new Date());
+  const get=t=>parts.find(p=>p.type===t)?.value||"";
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+function workingDaysForMonth(month){
+  if(!/^\d{4}-\d{2}$/.test(month))return[];
+  const [y,m]=month.split("-").map(Number);
+  const days=new Date(Date.UTC(y,m,0)).getUTCDate();
+  const out=[];
+  for(let d=1;d<=days;d++){
+    const dt=new Date(Date.UTC(y,m-1,d));
+    const key=`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+    if(dt.getUTCDay()===0||VIC_PUBLIC_HOLIDAYS.has(key))continue;
+    out.push({key,day:d,label:`${d} ${dt.toLocaleDateString("en-AU",{month:"short",timeZone:"UTC"})}`});
+  }
+  return out;
+}
+
+async function loadMonthlyFlow(){
+  if(profile?.role!=="admin")throw new Error("Admin access required.");
+  const {data:{session:liveFlowSession}}=await client.auth.getSession();
+  if(!liveFlowSession?.access_token)throw new Error("AXIS session expired.");
+
+  const r=await fetch(ORACLE_INSIGHTS_ENDPOINT,{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer "+liveFlowSession.access_token
+    },
+    body:JSON.stringify({include_timeline:true})
+  });
+
+  let j={};
+  try{j=await r.json()}catch{}
+  if(!r.ok||!j.ok)throw new Error(j.error||"Monthly Flow unavailable.");
+
+  flowMonth=String(j.month||"");
+  flowUsers=(Array.isArray(j.users)?j.users:[])
+    .filter(u=>Array.isArray(u.signup_dates)&&u.signup_dates.length)
+    .sort((a,b)=>String(a.salesperson||"").localeCompare(String(b.salesperson||"")));
+}
+
+function flowSelectedDates(){
+  const selected=flowPerson.value||"all";
+  if(selected==="all")return flowUsers.flatMap(u=>u.signup_dates||[]);
+  return flowUsers.find((_,i)=>String(i)===selected)?.signup_dates||[];
+}
+
+function flowMetrics(dates){
+  const days=workingDaysForMonth(flowMonth);
+  const today=melbourneTodayKey();
+  const elapsed=days.filter(d=>d.key<=today);
+  const counts=new Map(days.map(d=>[d.key,0]));
+  dates.forEach(k=>{if(counts.has(k))counts.set(k,(counts.get(k)||0)+1)});
+
+  const elapsedCounts=elapsed.map(d=>counts.get(d.key)||0);
+  const total=elapsedCounts.reduce((a,b)=>a+b,0);
+  const productive=elapsedCounts.filter(n=>n>0).length;
+  const zero=Math.max(0,elapsed.length-productive);
+  const zeroRate=elapsed.length?zero/elapsed.length:0;
+  const last3=elapsedCounts.slice(-3).reduce((a,b)=>a+b,0);
+  const first5=elapsedCounts.slice(0,5).reduce((a,b)=>a+b,0);
+
+  let level="watch",title="INCONSISTENT RHYTHM",copy="Your month is moving, but the daily pattern is uneven. Consistency now prevents the late-month scramble.";
+  if(elapsed.length>=3&&last3===0){
+    level="bad";title="NO MOMENTUM";copy="Three working days have passed without a signup. The month is moving even when you are not.";
+  }else if(elapsed.length>=6&&first5<=1){
+    level="bad";title="LATE START DETECTED";copy=`Only ${first5} signup${first5===1?"":"s"} landed in the first 5 working days. You have already given away the easiest part of the month.`;
+  }else if(elapsed.length>=5&&zeroRate>=0.60){
+    level="bad";title="YOU ARE DRIFTING";copy=`No signup has been recorded on ${Math.round(zeroRate*100)}% of working days so far. A few big days are hiding too many empty ones.`;
+  }else if(elapsed.length>=5&&zeroRate<=0.30){
+    level="good";title="STRONG RHYTHM";copy=`Signups have landed on ${productive} of ${elapsed.length} working days. Keep the pressure spread across the month.`;
+  }
+
+  return {days,counts,elapsed,total,productive,zero,zeroRate,last3,first5,level,title,copy};
+}
+
+function renderFlowChart(metrics){
+  const {days,counts}=metrics;
+  if(!days.length){
+    flowChartWrap.innerHTML=`<div class="flow-empty">No working-day data available.</div>`;
+    return;
+  }
+
+  const daily=days.map(d=>counts.get(d.key)||0);
+  const values=flowView==="daily"?daily:daily.reduce((arr,n,i)=>{arr.push(n+(arr[i-1]||0));return arr},[]);
+  const max=Math.max(1,...values);
+  const width=Math.max(760,days.length*46);
+  const height=330,padL=42,padR=18,padT=24,padB=58;
+  const plotW=width-padL-padR,plotH=height-padT-padB;
+  const x=i=>padL+(days.length===1?plotW/2:i*(plotW/(days.length-1)));
+  const y=v=>padT+plotH-(v/max)*plotH;
+  let grid="";
+  for(let i=0;i<=4;i++){
+    const val=Math.round(max*(4-i)/4);
+    const gy=padT+plotH*i/4;
+    grid+=`<line class="flow-grid" x1="${padL}" y1="${gy}" x2="${width-padR}" y2="${gy}"></line><text class="flow-axis" x="8" y="${gy+4}">${val}</text>`;
+  }
+
+  const today=melbourneTodayKey();
+  const todayIndex=days.findIndex(d=>d.key===today);
+  const todayLine=todayIndex>=0?`<line class="flow-today" x1="${x(todayIndex)}" y1="${padT}" x2="${x(todayIndex)}" y2="${padT+plotH}"></line>`:"";
+
+  let marks="";
+  if(flowView==="daily"){
+    const slot=Math.max(10,plotW/days.length);
+    const barW=Math.min(24,slot*.58);
+    marks=values.map((v,i)=>{
+      const top=y(v),h=padT+plotH-top;
+      return `<rect class="flow-bar" x="${x(i)-barW/2}" y="${top}" width="${barW}" height="${Math.max(v?3:0,h)}" rx="5"></rect>`;
+    }).join("");
+  }else{
+    const pts=values.map((v,i)=>`${x(i)},${y(v)}`).join(" ");
+    marks=`<polyline class="flow-line" points="${pts}"></polyline>`+
+      values.map((v,i)=>`<circle class="flow-dot" cx="${x(i)}" cy="${y(v)}" r="4"></circle>`).join("");
+  }
+
+  const labels=days.map((d,i)=>`<text class="flow-axis" transform="translate(${x(i)-2},${height-20}) rotate(-50)" text-anchor="end">${d.day}-${String(flowMonth).slice(5)}</text>`).join("");
+
+  flowChartWrap.innerHTML=`<svg class="flow-chart" viewBox="0 0 ${width} ${height}" style="width:${width}px" role="img" aria-label="Monthly signup ${flowView} chart">${grid}${todayLine}${marks}${labels}</svg>`;
+  if(todayIndex>=0){
+    const target=Math.max(0,x(todayIndex)-flowChartWrap.clientWidth*.55);
+    flowChartWrap.scrollLeft=target;
+  }
+}
+
+function renderMonthlyFlow(){
+  const dates=flowSelectedDates();
+  const m=flowMetrics(dates);
+  const selected=flowPerson.value==="all"?"All salespeople":flowUsers[Number(flowPerson.value)]?.salesperson||"Salesperson";
+
+  flowPeriod.textContent=`${monthLabelNow()} · ${selected} · Admin trial`;
+  flowSummary.innerHTML=
+    `<div class="stat"><strong>${m.total}</strong><span>Sign Ups</span></div>`+
+    `<div class="stat"><strong>${m.productive}</strong><span>Productive Days</span></div>`+
+    `<div class="stat"><strong>${m.zero}</strong><span>Zero-Signup Days</span></div>`+
+    `<div class="stat"><strong>${Math.round(m.zeroRate*100)}%</strong><span>Empty Working Days</span></div>`;
+
+  flowHand.dataset.level=m.level;
+  flowHand.innerHTML=`<strong>${m.title}</strong><p>${m.copy}</p>`;
+  flowDailyBtn.classList.toggle("on",flowView==="daily");
+  flowCumulativeBtn.classList.toggle("on",flowView==="cumulative");
+  renderFlowChart(m);
+}
+
+async function openMonthlyFlow(){
+  if(profile?.role!=="admin")return;
+  overlay.classList.remove("hidden");
+  flowModal.classList.remove("hidden");
+  flowSummary.innerHTML=`<div class="stat"><strong>…</strong><span>Loading Oracle</span></div>`;
+  flowHand.dataset.level="watch";
+  flowHand.innerHTML=`<strong>READING THE MONTH</strong><p>Pulling sign-up dates from Oracle…</p>`;
+  flowChartWrap.innerHTML=`<div class="flow-empty">Loading Monthly Flow…</div>`;
+
+  try{
+    await loadMonthlyFlow();
+    flowPerson.innerHTML=`<option value="all">All salespeople</option>`+
+      flowUsers.map((u,i)=>`<option value="${i}">${u.salesperson} · ${u.signup_dates.length} signups</option>`).join("");
+    flowPerson.value="all";
+    flowView="daily";
+    renderMonthlyFlow();
+  }catch(e){
+    console.error("Monthly Flow:",e);
+    flowSummary.innerHTML="";
+    flowHand.dataset.level="bad";
+    flowHand.innerHTML=`<strong>MONTHLY FLOW UNAVAILABLE</strong><p>${e?.message||"Unable to load Oracle sign-up dates."}</p>`;
+    flowChartWrap.innerHTML="";
+  }
+}
+
 function weatherEmoji(code,wind){
   const c=Number(code);
   if(Number(wind)>=35)return"🌬️";
@@ -1081,6 +1319,11 @@ function renderTiles(){
     const m=document.createElement("a");m.className="mobile-tile";m.dataset.app=a.key;m.href=a.url;m.target="_blank";m.rel="noopener";m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong><small>${a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date")}</small></div><div class="badge ${counts[a.key]?"warn":"ok"}">${a.external?"↗":counts[a.key]||"✓"}</div>`;m.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);mob.appendChild(m);
   });
 
+  if(profile.role==="admin"){
+    const f=document.createElement("button");f.className="tile admin";f.dataset.app="flow";f.innerHTML=`<div class="tile-top"><div class="icon">〽</div><div class="badge warn">LIVE</div></div><div><h2>Monthly Flow</h2><p>Daily sign-up rhythm · admin trial</p></div><div class="tile-bottom"><span>Oracle sign-up dates</span><strong>READ THE MONTH</strong></div>`;f.onclick=openMonthlyFlow;grid.appendChild(f);
+    const fm=document.createElement("button");fm.className="mobile-tile";fm.dataset.app="flow";fm.innerHTML=`<div class="icon">〽</div><div><strong>Monthly Flow</strong><small>Daily sign-up rhythm</small></div><div class="badge warn">›</div>`;fm.onclick=openMonthlyFlow;mob.appendChild(fm);
+  }
+
   const league=document.createElement("button");league.className="tile league-tile";league.dataset.app="league";league.innerHTML=renderLeagueTileHtml();league.onclick=openLeague;grid.appendChild(league);
   const lm=document.createElement("button");lm.className="mobile-tile";lm.dataset.app="league";lm.innerHTML=`<div class="icon">🏁</div><div><strong>AXIS League</strong><small>${profile.role==="user"&&myLeague?`Your rank #${myLeague.rank} · ${scoreData.month} score`:"Monthly usage league"}</small></div><div class="badge ok">›</div>`;lm.onclick=openLeague;mob.appendChild(lm);
 
@@ -1155,7 +1398,7 @@ function buildQr(box,renderSize,cssSize){
 }
 
 function openProfile(){overlay.classList.remove("hidden");profileDrawer.classList.remove("hidden")}
-function closeAll(){[profileDrawer,usersModal,editModal,addStaffModal,leagueModal,insightsModal].forEach(x=>x.classList.add("hidden"));overlay.classList.add("hidden")}
+function closeAll(){[profileDrawer,usersModal,editModal,addStaffModal,leagueModal,flowModal,insightsModal].forEach(x=>x.classList.add("hidden"));overlay.classList.add("hidden")}
 
 async function adminCall(payload){
   const {data}=await client.auth.getSession();const token=data.session?.access_token;if(!token)throw new Error("AXIS session expired.");
@@ -1385,7 +1628,10 @@ confirmPin.onkeydown=e=>{if(e.key==="Enter")saveRecoveredPin()};
 profileBtn.onclick=openProfile;closeProfile.onclick=closeAll;overlay.onclick=closeAll;saveContact.onclick=saveVcard;logoutBtn.onclick=logout;
 closeUsers.onclick=closeAll;addStaffBtn.onclick=openAddStaff;closeAddStaff.onclick=closeAddStaffModal;createStaffBtn.onclick=createStaff;document.querySelectorAll(".add-access").forEach(b=>b.onclick=()=>b.classList.toggle("on"));staffSearch.oninput=e=>{const q=e.target.value.toLowerCase();renderStaff(staff.filter(p=>[p.first_name,p.last_name,p.email,p.position,p.department,p.role].some(v=>(v||"").toLowerCase().includes(q))))};
 closeEdit.onclick=()=>{editModal.classList.add("hidden");usersModal.classList.remove("hidden")};saveUser.onclick=saveEditing;resetPin.onclick=resetEditingPin;toggleActive.onclick=toggleEditingActive;
-closeInsights.onclick=closeAll;closeLeague.onclick=closeAll;
+closeInsights.onclick=closeAll;closeLeague.onclick=closeAll;closeFlow.onclick=closeAll;
+flowPerson.onchange=renderMonthlyFlow;
+flowDailyBtn.onclick=()=>{flowView="daily";renderMonthlyFlow()};
+flowCumulativeBtn.onclick=()=>{flowView="cumulative";renderMonthlyFlow()};
 
 bootstrap();
 </script>
