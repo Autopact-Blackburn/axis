@@ -412,6 +412,31 @@ button{cursor:pointer}
   .flow-chart{height:360px}
 }
 
+
+/* Sales Rhythm decision controls */
+#flowSummary .stat{appearance:none;-webkit-appearance:none;color:inherit;text-align:left;width:100%;cursor:pointer;transition:border-color .16s ease,background .16s ease,transform .16s ease,box-shadow .16s ease}
+#flowSummary .stat:hover{transform:translateY(-1px);border-color:rgba(181,158,255,.28)}
+#flowSummary .stat.active{border-color:rgba(181,158,255,.48);background:rgba(141,107,255,.095);box-shadow:inset 0 0 0 1px rgba(181,158,255,.08)}
+#flowSummary .stat[data-flow-mode="pending"].active{border-color:rgba(79,235,225,.46);background:rgba(79,235,225,.07)}
+#flowSummary .stat[data-flow-mode="delivered"].active{border-color:rgba(109,214,164,.42);background:rgba(109,214,164,.065)}
+#flowSummary .stat[data-flow-mode="productive"].active{border-color:rgba(242,184,92,.42);background:rgba(242,184,92,.065)}
+.flow-full-btn{height:46px;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.025);color:var(--muted);padding:0 14px;font-size:9px;font-weight:900;letter-spacing:.07em}
+.flow-full-btn.on{color:#fff;border-color:rgba(181,158,255,.42);background:rgba(141,107,255,.14)}
+.flow-delivered-bar{fill:rgba(109,214,164,.74)}
+.flow-delivered-line{fill:none;stroke:#86e5b5;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.flow-delivered-dot{fill:#f7f4fa;stroke:#6dd6a4;stroke-width:2}
+.flow-value.delivered{fill:#b9f1d3}
+.flow-pending-area{fill:rgba(79,235,225,.12);stroke:none}
+.flow-pending-line{fill:none;stroke:#4febe1;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.flow-pending-dot{fill:#f7f4fa;stroke:#4febe1;stroke-width:2}
+.flow-day-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:8px;padding:16px}
+.flow-day-card{border:1px solid var(--line);border-radius:13px;padding:10px;background:rgba(255,255,255,.02);min-height:72px}
+.flow-day-card.good{border-color:rgba(109,214,164,.28);background:rgba(109,214,164,.05)}
+.flow-day-card.today{box-shadow:inset 0 0 0 1px rgba(242,184,92,.48)}
+.flow-day-card strong{display:block;font-size:17px}.flow-day-card span{display:block;font-size:8px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
+.flow-action-note{margin-top:10px;color:var(--muted);font-size:9px;line-height:1.5}
+@media(max-width:700px){.flow-full-btn{width:100%}.flow-day-strip{grid-template-columns:repeat(3,minmax(0,1fr));padding:10px}}
+
 .mobile-list{display:none}
 
 @media(max-width:1100px){
@@ -638,6 +663,7 @@ button{cursor:pointer}
   <div id="flowSummary" class="insight-grid"></div>
   <div class="flow-toolbar">
     <select id="flowPerson" class="flow-select" aria-label="Salesperson"></select>
+    <button id="flowFullBtn" class="flow-full-btn on" type="button">FULL RHYTHM</button>
     <div class="flow-toggle" aria-label="Chart view">
       <button id="flowDailyBtn" type="button" class="on">DAILY</button>
       <button id="flowCumulativeBtn" type="button">CUMULATIVE</button>
@@ -645,7 +671,7 @@ button{cursor:pointer}
   </div>
   <div id="flowHand" class="flow-hand" data-level="watch"></div>
   <div id="flowChartWrap" class="flow-chart-wrap"></div>
-  <div class="flow-foot">Working-day chart slots exclude Sundays and Victorian public holidays. Legitimate sign-ups on non-working days still count in the Signed total. To Be Delivered is live Oracle/DMS pending status 2.</div>
+  <div class="flow-foot">Working-day sales slots exclude Sundays and Victorian public holidays. Signed = business written. Delivered = completed handovers. To Be Delivered = live Oracle/DMS status 2, plotted by booked delivery date first, then estimated delivery date. Undated pending deals remain in the total but cannot appear on the timeline.</div>
 </section>
 
 <section id="insightsModal" class="modal hidden">
@@ -684,9 +710,9 @@ const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{
 let profile=null,session=null,counts={},timer=null,staff=[],editing=null;
 let recoveryMode=false;
 let leagueRows=[],myLeague=null,scoreData={month:0,lifetime:0,rank:null,launches:0};
-let flowDeals=[],flowPeople=[],flowMonth="",flowView="daily";
+let flowDeals=[],flowPeople=[],flowMonth="",flowView="daily",flowMode="full";
 let deliveryPulse={loaded:false,pending:0,delivered:0,processed:0,count:0,scope:"all",deals:[],error:null};
-let appointmentPulse={overdue:0,upcoming:null,target:4,monthly:0,loaded:false};
+let appointmentPulse={overdue:0,upcoming:null,target:4,activeSalespeople:0,monthly:0,loaded:false};
 let rhythmPulse={loaded:false,level:"watch",severity:1,title:"READING RHYTHM",metrics:null};
 let momentumData={score:null,label:"Building",tier:"white"};
 let audioUnlocked=false,lastSeveritySnapshot=null;
@@ -973,7 +999,7 @@ async function loadAxisLeague(){
 }
 function renderScoreChip(){renderMomentumChip()}
 function momentumRank(score){const n=Math.max(0,Math.min(100,Math.round(Number(score)||0)));if(n>=98)return{label:"AXIS Prime",tier:"platinum"};if(n>=90)return{label:"Field Marshal",tier:"gold"};if(n>=75)return{label:"Commander",tier:"silver"};if(n>=60)return{label:"Lieutenant",tier:"purple"};if(n>=45)return{label:"Specialist",tier:"green"};if(n>=30)return{label:"Operator",tier:"bronze"};return{label:"Cadet",tier:"white"}}
-function calculateMomentum(){const components=[];const overdue=Math.max(0,Number(appointmentPulse.overdue||0));components.push({weight:30,score:Math.max(0,100-overdue*18)});if(Number.isFinite(appointmentPulse.upcoming))components.push({weight:25,score:Math.min(100,Math.max(0,Number(appointmentPulse.upcoming)/4*100))});const intros=Math.max(0,Number(counts.delivery||0));components.push({weight:20,score:Math.max(0,100-intros*15)});if(rhythmPulse.loaded){let rs=rhythmPulse.level==="good"?100:rhythmPulse.level==="bad"?28:65;if(rhythmPulse.severity>=4)rs=10;components.push({weight:25,score:rs})}const weight=components.reduce((a,c)=>a+c.weight,0)||1;const score=Math.round(components.reduce((a,c)=>a+c.score*c.weight,0)/weight);const rank=momentumRank(score);momentumData={score,label:rank.label,tier:rank.tier};renderMomentumChip();return momentumData}
+function calculateMomentum(){const components=[];const overdue=Math.max(0,Number(appointmentPulse.overdue||0));components.push({weight:30,score:Math.max(0,100-overdue*18)});if(Number.isFinite(appointmentPulse.upcoming)){const satTarget=Math.max(1,Number(appointmentPulse.target||4));components.push({weight:25,score:Math.min(100,Math.max(0,Number(appointmentPulse.upcoming)/satTarget*100))});}const intros=Math.max(0,Number(counts.delivery||0));components.push({weight:20,score:Math.max(0,100-intros*15)});if(rhythmPulse.loaded){let rs=rhythmPulse.level==="good"?100:rhythmPulse.level==="bad"?28:65;if(rhythmPulse.severity>=4)rs=10;components.push({weight:25,score:rs})}const weight=components.reduce((a,c)=>a+c.weight,0)||1;const score=Math.round(components.reduce((a,c)=>a+c.score*c.weight,0)/weight);const rank=momentumRank(score);momentumData={score,label:rank.label,tier:rank.tier};renderMomentumChip();return momentumData}
 function renderMomentumChip(){const points=document.getElementById("axisPoints"),rank=document.getElementById("axisRank"),shield=document.getElementById("momentumShield");if(!points||!rank||!shield)return;if(momentumData.score===null){points.textContent="—";rank.textContent="Building";return}points.textContent=momentumData.score;rank.textContent=momentumData.label;shield.className=`momentum-shield ${momentumData.tier}`}
 function renderLeagueTileHtml(){
   const top=leagueRows.slice(0,3);
@@ -1089,24 +1115,35 @@ async function loadMonthlyFlow(){
     cancelled_date:d?.cancelled_date||null
   }));
 
+  rebuildFlowPeople();
+}
+
+
+function flowPersonIdentity(name,email){const cleanEmail=normalisePersonKey(email),cleanName=normalisePersonKey(name);return cleanEmail||cleanName}
+function rebuildFlowPeople(){
   const peopleMap=new Map();
-  flowDeals.forEach(d=>{
-    const name=d.salesperson_name||"Unknown salesperson";
-    const key=(d.salesperson_email||name).toLowerCase();
-    if(!peopleMap.has(key))peopleMap.set(key,{key,name,email:d.salesperson_email||"",count:0});
-    peopleMap.get(key).count++;
-  });
-  flowPeople=[...peopleMap.values()].sort((a,b)=>a.name.localeCompare(b.name));
+  const add=(name,email,kind)=>{
+    const cleanName=String(name||"").trim(),cleanEmail=String(email||"").trim().toLowerCase(),key=flowPersonIdentity(cleanName,cleanEmail);
+    if(!key)return;
+    if(!peopleMap.has(key))peopleMap.set(key,{key,name:cleanName||cleanEmail||"Unknown salesperson",email:cleanEmail,count:0,signed:0,delivered:0,pending:0});
+    const p=peopleMap.get(key);if(kind==="signed")p.signed++;if(kind==="delivered")p.delivered++;if(kind==="pending")p.pending++;
+  };
+  flowDeals.filter(d=>!d.cancelled).forEach(d=>{if(d.sign_up_date)add(d.salesperson_name,d.salesperson_email,"signed");if(d.actual_delivered_date)add(d.salesperson_name,d.salesperson_email,"delivered")});
+  (deliveryPulse.deals||[]).forEach(d=>{const status=Number(d?.status);if(status===2)add(d?.salesperson_name,d?.salesperson_email,"pending");if(status===5||status===6)add(d?.salesperson_name,d?.salesperson_email,"delivered")});
+  peopleMap.forEach(p=>p.count=p.signed+p.delivered+p.pending);flowPeople=[...peopleMap.values()].sort((a,b)=>a.name.localeCompare(b.name));
+}
+function selectedFlowPerson(){const selected=flowPerson?.value||"all";return selected==="all"?null:flowPeople.find(p=>p.key===selected)||null}
+function flowDealMatchesPerson(d,person){
+  if(!person)return true;
+  const wantedEmail=normalisePersonKey(person.email),wantedName=normalisePersonKey(person.name),email=normalisePersonKey(d?.salesperson_email),name=normalisePersonKey(d?.salesperson_name);
+  return (wantedEmail&&email===wantedEmail)||(wantedName&&name===wantedName);
 }
 
 function flowSelectedDeals(){
   if(String(profile?.role||"").toLowerCase()==="user")return flowDeals;
-  const selected=flowPerson.value||"all";
-  if(selected==="all")return flowDeals;
-  return flowDeals.filter(d=>{
-    const key=(d.salesperson_email||d.salesperson_name||"").toLowerCase();
-    return key===selected;
-  });
+  const person=selectedFlowPerson();
+  if(!person)return flowDeals;
+  return flowDeals.filter(d=>flowDealMatchesPerson(d,person));
 }
 
 function flowMetrics(deals){
@@ -1162,167 +1199,108 @@ function flowMetrics(deals){
   return {days,signupCounts,deliveredCounts,expectedCounts,elapsed,signedTotal,deliveredTotal,toBeDelivered,productive,zero,zeroRate,last3,first5,dryStreak,level,title,copy};
 }
 
+
+function flowDeliveredChartData(days,deals){
+  const map=new Map(days.map(d=>[d.key,0])),seen=new Set();
+  deals.filter(d=>!d.cancelled&&d.actual_delivered_date).forEach(d=>{
+    const key=String(d.actual_delivered_date||"").slice(0,10),id=String(d.deal_number||`${d.salesperson_name}|${key}|${seen.size}`);
+    if(map.has(key)&&!seen.has(id)){map.set(key,(map.get(key)||0)+1);seen.add(id)}
+  });
+  selectedDeliveredDeliveryDeals().forEach(d=>{
+    const key=deliveryActualDateKey(d),id=String(d?.deal_number||`${d?.salesperson_name||""}|${key}|${seen.size}`);
+    if(map.has(key)&&!seen.has(id)){map.set(key,(map.get(key)||0)+1);seen.add(id)}
+  });
+  return map;
+}
+function flowModeLabel(mode){return mode==="signed"?"Signed":mode==="delivered"?"Delivered":mode==="pending"?"To Be Delivered":mode==="productive"?"Productive Days":"Full Rhythm"}
+function flowCoaching(metrics){
+  const pending=selectedPendingDeliveryDeals(),deliveredMap=flowDeliveredChartData(metrics.days,flowSelectedDeals()),deliveredThisMonth=[...deliveredMap.values()].reduce((a,b)=>a+b,0),today=melbourneTodayKey();
+  const futureDated=pending.map(d=>deliveryDateKey(d)).filter(k=>k&&k>=today&&k.startsWith(flowMonth+"-")),bucket={},cluster={date:null,count:0};
+  futureDated.forEach(k=>bucket[k]=(bucket[k]||0)+1);Object.entries(bucket).forEach(([date,count])=>{if(count>cluster.count){cluster.date=date;cluster.count=count}});
+  const undated=pending.filter(d=>!deliveryDateKey(d)).length;
+  if(flowMode==="signed"){
+    if(metrics.dryStreak>=3)return{level:"bad",title:"👋 WAKE THE MONTH UP",copy:`${metrics.dryStreak} working days have passed without a sign-up. The next useful action is not a bigger target — it is another productive day.`};
+    if(metrics.productive<=1&&metrics.elapsed.length>=3)return{level:"watch",title:"🫵 ONE DAY IS DOING TOO MUCH WORK",copy:`${metrics.signedTotal} signed across ${metrics.productive} productive day${metrics.productive===1?"":"s"}. Spread the result across more working days before the month gets away.`};
+    return{level:"good",title:"🤝 THIS IS A RHYTHM — PROTECT IT",copy:`${metrics.signedTotal} signed across ${metrics.productive} productive day${metrics.productive===1?"":"s"}. Keep creating another productive day instead of waiting for a late-month rescue.`};
+  }
+  if(flowMode==="delivered"){
+    const outstanding=Math.max(0,pending.length);
+    if(outstanding>deliveredThisMonth*3&&outstanding>=8)return{level:"watch",title:"🫱 THE MONEY ISN’T HOME YET",copy:`${deliveredThisMonth} delivered this month with ${outstanding} still pending. The order bank is healthy, but handover conversion now matters.`};
+    return{level:"good",title:"👍 CLEAN HANDOVER RHYTHM",copy:`${deliveredThisMonth} delivered this month. Use this view to make sure handovers keep pace with the pending bank rather than bunching at month end.`};
+  }
+  if(flowMode==="pending"){
+    if(undated>0)return{level:"bad",title:`🫵 ${undated} HAVE NO DATE`,copy:`${undated} pending deal${undated===1?" is":"s are"} invisible to the delivery timeline. Give them an estimated or booked date so the workload can actually be managed.`};
+    if(cluster.count>=5)return{level:"watch",title:"✋ DELIVERY WALL INCOMING",copy:`${cluster.count} pending deliveries are pointing at ${cluster.date}. Check customer booking, finance and vehicle readiness before that day becomes the problem.`};
+    return{level:"good",title:"🤝 THE RUNWAY IS VISIBLE",copy:`${pending.length} pending deliveries are currently mapped into the forward calendar. Keep the dates clean so tomorrow’s workload stays visible today.`};
+  }
+  if(flowMode==="productive"){
+    const total=Math.max(1,metrics.elapsed.length),pct=Math.round(metrics.productive/total*100);
+    if(pct<35&&metrics.elapsed.length>=4)return{level:"bad",title:"👋 TOO MANY EMPTY DAYS",copy:`Only ${metrics.productive} of ${metrics.elapsed.length} working days have produced a sign-up (${pct}%). The fix is another productive day, not a heroic final week.`};
+    return{level:pct>=60?"good":"watch",title:pct>=60?"🤝 CONSISTENCY IS DOING THE WORK":"🫵 BUILD ANOTHER GREEN DAY",copy:`${metrics.productive} of ${metrics.elapsed.length} working days have produced a sign-up. This view is about frequency, not one-off volume.`};
+  }
+  if(undated>0)return{level:"watch",title:"🫵 CLEAN THE FORWARD BANK",copy:`${undated} pending deal${undated===1?" has":"s have"} no usable delivery date. The chart can only manage what the data makes visible.`};
+  if(metrics.level==="bad")return{level:"bad",title:"👋 SALES RHYTHM NEEDS A HIT",copy:metrics.copy};
+  return{level:metrics.level,title:metrics.level==="good"?"🤝 KEEP THE WHOLE MACHINE MOVING":"✋ WATCH THE RHYTHM",copy:`${metrics.signedTotal} signed · ${deliveredThisMonth} delivered · ${pending.length} pending. Read left to right: create business, hand it over, then manage what is coming at you.`};
+}
+function renderProductiveDays(metrics){
+  const today=melbourneTodayKey(),cards=metrics.days.map(d=>{const n=metrics.signupCounts.get(d.key)||0,elapsed=d.key<=today;return `<div class="flow-day-card ${n>0?"good":""} ${d.key===today?"today":""}"><strong>${elapsed?(n||"—"):"·"}</strong><span>${d.label}${n>0?` · ${n} signed`:elapsed?" · empty":" · ahead"}</span></div>`}).join("");
+  flowChartWrap.innerHTML=`<div class="flow-day-strip">${cards}</div><div class="flow-action-note" style="padding:0 16px 16px">Green days are productive working days. The point is to make the month repeatable rather than rely on isolated spikes.</div>`;
+}
 function renderFlowChart(metrics){
-  const {days,signupCounts}=metrics;
-  if(!days.length){
-    flowChartWrap.innerHTML=`<div class="flow-empty">No working-day data available.</div>`;
-    return;
-  }
-
-  const pendingChart=pendingDeliveryChartData(days);
-  const dailySigned=days.map(d=>signupCounts.get(d.key)||0);
-  const dailyPending=days.map(d=>pendingChart.map.get(d.key)||0);
-
-  const signedValues=flowView==="daily"
-    ?dailySigned
-    :dailySigned.reduce((arr,n,i)=>{arr.push(n+(arr[i-1]||0));return arr},[]);
-
-  const pendingValues=flowView==="daily"
-    ?dailyPending
-    :dailyPending.reduce((arr,n,i)=>{arr.push(n+(arr[i-1]||0));return arr},[]);
-
-  const max=Math.max(1,...signedValues,...pendingValues);
-  const width=Math.max(900,days.length*50);
-  const height=390,padL=46,padR=22,padT=54,padB=66;
-  const plotW=width-padL-padR,plotH=height-padT-padB;
-  const x=i=>padL+(days.length===1?plotW/2:i*(plotW/(days.length-1)));
-  const y=v=>padT+plotH-(v/max)*plotH;
-
-  let grid="";
-  for(let i=0;i<=4;i++){
-    const val=Math.round(max*(4-i)/4);
-    const gy=padT+plotH*i/4;
-    grid+=`<line class="flow-grid" x1="${padL}" y1="${gy}" x2="${width-padR}" y2="${gy}"></line><text class="flow-axis" x="8" y="${gy+4}">${val}</text>`;
-  }
-
-  const today=melbourneTodayKey();
-  const todayIndex=days.findIndex(d=>d.key===today);
-  const todayLine=todayIndex>=0?`<line class="flow-today" x1="${x(todayIndex)}" y1="${padT}" x2="${x(todayIndex)}" y2="${padT+plotH}"></line>`:"";
-
+  if(flowMode==="productive"){renderProductiveDays(metrics);return}
+  const {days,signupCounts}=metrics;if(!days.length){flowChartWrap.innerHTML=`<div class="flow-empty">No working-day data available.</div>`;return}
+  const deals=flowSelectedDeals(),pendingChart=pendingDeliveryChartData(days),deliveredMap=flowDeliveredChartData(days,deals);
+  const dailySigned=days.map(d=>signupCounts.get(d.key)||0),dailyDelivered=days.map(d=>deliveredMap.get(d.key)||0),dailyPending=days.map(d=>pendingChart.map.get(d.key)||0);
+  const cumulative=arr=>arr.reduce((out,n,i)=>{out.push(n+(out[i-1]||0));return out},[]);
+  const signedValues=flowView==="daily"?dailySigned:cumulative(dailySigned),deliveredValues=flowView==="daily"?dailyDelivered:cumulative(dailyDelivered),pendingValues=flowView==="daily"?dailyPending:cumulative(dailyPending);
+  let series=[];if(flowMode==="signed")series=["signed"];else if(flowMode==="delivered")series=["delivered"];else if(flowMode==="pending")series=["pending"];else series=["signed","delivered","pending"];
+  const visible=[];if(series.includes("signed"))visible.push(...signedValues);if(series.includes("delivered"))visible.push(...deliveredValues);if(series.includes("pending"))visible.push(...pendingValues);
+  const max=Math.max(1,...visible),width=Math.max(900,days.length*50),height=410,padL=46,padR=22,padT=60,padB=66,plotW=width-padL-padR,plotH=height-padT-padB;
+  const x=i=>padL+(days.length===1?plotW/2:i*(plotW/(days.length-1))),y=v=>padT+plotH-(v/max)*plotH;
+  let grid="";for(let i=0;i<=4;i++){const val=Math.round(max*(4-i)/4),gy=padT+plotH*i/4;grid+=`<line class="flow-grid" x1="${padL}" y1="${gy}" x2="${width-padR}" y2="${gy}"></line><text class="flow-axis" x="8" y="${gy+4}">${val}</text>`}
+  const today=melbourneTodayKey(),todayIndex=days.findIndex(d=>d.key===today),todayLine=todayIndex>=0?`<line class="flow-today" x1="${x(todayIndex)}" y1="${padT}" x2="${x(todayIndex)}" y2="${padT+plotH}"></line>`:"";
+  const lineSeries=(values,lineClass,dotClass,valueClass="")=>{const pts=values.map((v,i)=>`${x(i)},${y(v)}`).join(" ");return `<polyline class="${lineClass}" points="${pts}"></polyline>`+values.map((v,i)=>`<circle class="${dotClass}" cx="${x(i)}" cy="${y(v)}" r="4"></circle>${v?`<text class="flow-value ${valueClass}" x="${x(i)}" y="${Math.max(18,y(v)-10)}" text-anchor="middle">${v}</text>`:""}`).join("")};
   let marks="";
   if(flowView==="daily"){
-    const slot=Math.max(14,plotW/days.length);
-    const barW=Math.min(17,slot*.32);
-
-    const signedBars=signedValues.map((v,i)=>{
-      const top=y(v),h=padT+plotH-top;
-      return `<rect class="flow-bar" x="${x(i)-barW-2}" y="${top}" width="${barW}" height="${Math.max(v?3:0,h)}" rx="5"></rect>`+
-        (v?`<text class="flow-value" x="${x(i)-barW/2-2}" y="${Math.max(16,top-8)}" text-anchor="middle">${v}</text>`:"");
-    }).join("");
-
-    const pendingBars=pendingValues.map((v,i)=>{
-      const top=y(v),h=padT+plotH-top;
-      return `<rect class="flow-delivery-bar" x="${x(i)+2}" y="${top}" width="${barW}" height="${Math.max(v?3:0,h)}" rx="5"></rect>`+
-        (v?`<text class="flow-value pending" x="${x(i)+barW/2+2}" y="${Math.max(16,top-8)}" text-anchor="middle">${v}</text>`:"");
-    }).join("");
-
-    marks=signedBars+pendingBars;
+    const slot=Math.max(14,plotW/days.length),count=series.length,barW=Math.min(17,slot*(count===1?.48:.23)),offsets=count===1?[0]:count===2?[-barW*.7,barW*.7]:[-barW-3,0,barW+3];
+    series.forEach((name,idx)=>{const values=name==="signed"?signedValues:name==="delivered"?deliveredValues:pendingValues;if(name==="pending"){const base=padT+plotH,pts=[`${x(0)},${base}`,...values.map((v,i)=>`${x(i)},${y(v)}`),`${x(values.length-1)},${base}`].join(" ");marks+=`<polygon class="flow-pending-area" points="${pts}"></polygon>`+lineSeries(values,"flow-pending-line","flow-pending-dot","pending")}else{const cls=name==="signed"?"flow-bar":"flow-delivered-bar",vcls=name==="delivered"?"delivered":"";marks+=values.map((v,i)=>{const top=y(v),h=padT+plotH-top,xx=x(i)+offsets[idx]-barW/2;return `<rect class="${cls}" x="${xx}" y="${top}" width="${barW}" height="${Math.max(v?3:0,h)}" rx="5"></rect>`+(v?`<text class="flow-value ${vcls}" x="${xx+barW/2}" y="${Math.max(18,top-8)}" text-anchor="middle">${v}</text>`:"")}).join("")}});
   }else{
-    const signedPts=signedValues.map((v,i)=>`${x(i)},${y(v)}`).join(" ");
-    const pendingPts=pendingValues.map((v,i)=>`${x(i)},${y(v)}`).join(" ");
-
-    marks=
-      `<polyline class="flow-line" points="${signedPts}"></polyline>`+
-      signedValues.map((v,i)=>`<circle class="flow-dot" cx="${x(i)}" cy="${y(v)}" r="4"></circle>${v?`<text class="flow-value" x="${x(i)}" y="${Math.max(16,y(v)-10)}" text-anchor="middle">${v}</text>`:""}`).join("")+
-      `<polyline class="flow-delivery-line" points="${pendingPts}"></polyline>`+
-      pendingValues.map((v,i)=>`<circle class="flow-delivery-dot" cx="${x(i)}" cy="${y(v)}" r="4"></circle>${v?`<text class="flow-value pending" x="${x(i)}" y="${Math.max(16,y(v)-10)}" text-anchor="middle">${v}</text>`:""}`).join("");
+    if(series.includes("pending")){const base=padT+plotH,pts=[`${x(0)},${base}`,...pendingValues.map((v,i)=>`${x(i)},${y(v)}`),`${x(pendingValues.length-1)},${base}`].join(" ");marks+=`<polygon class="flow-pending-area" points="${pts}"></polygon>`}
+    if(series.includes("signed"))marks+=lineSeries(signedValues,"flow-line","flow-dot","");if(series.includes("delivered"))marks+=lineSeries(deliveredValues,"flow-delivered-line","flow-delivered-dot","delivered");if(series.includes("pending"))marks+=lineSeries(pendingValues,"flow-pending-line","flow-pending-dot","pending");
   }
-
   const labels=days.map((d,i)=>`<text class="flow-axis" transform="translate(${x(i)-2},${height-20}) rotate(-50)" text-anchor="end">${d.day}-${String(flowMonth).slice(5)}</text>`).join("");
-
-  const legend=`
-    <g class="flow-legend">
-      <rect class="flow-bar" x="${padL}" y="18" width="14" height="10" rx="3"></rect>
-      <text class="flow-legend-text" x="${padL+22}" y="27">Signed</text>
-      <rect class="flow-delivery-bar" x="${padL+88}" y="18" width="14" height="10" rx="3"></rect>
-      <text class="flow-legend-text" x="${padL+110}" y="27">To Be Delivered</text>
-      <text class="flow-legend-total" x="${width-padR}" y="27" text-anchor="end">${pendingChart.total} pending status 2${pendingChart.undatedOrOutside?` · ${pendingChart.undatedOrOutside} not plotted in this month`:""}</text>
-    </g>`;
-
-  flowChartWrap.innerHTML=`<svg class="flow-chart" viewBox="0 0 ${width} ${height}" style="width:${width}px;height:${height}px" role="img" aria-label="Sales Rhythm ${flowView} chart">${legend}${grid}${todayLine}${marks}${labels}</svg>`;
-
-  if(todayIndex>=0){
-    const target=Math.max(0,x(todayIndex)-flowChartWrap.clientWidth*.55);
-    flowChartWrap.scrollLeft=target;
-  }
+  let lx=padL,legendParts=[];const addLegend=(cls,label)=>{legendParts.push(`<rect class="${cls}" x="${lx}" y="18" width="14" height="10" rx="3"></rect><text class="flow-legend-text" x="${lx+22}" y="27">${label}</text>`);lx+=label==="To Be Delivered"?132:104};
+  if(series.includes("signed"))addLegend("flow-bar","Signed");if(series.includes("delivered"))addLegend("flow-delivered-bar","Delivered");if(series.includes("pending"))addLegend("flow-delivery-bar","To Be Delivered");
+  const legend=`<g class="flow-legend">${legendParts.join("")}<text class="flow-legend-total" x="${width-padR}" y="27" text-anchor="end">${series.includes("pending")?`${pendingChart.total} pending${pendingChart.undatedOrOutside?` · ${pendingChart.undatedOrOutside} not plotted here`:""}`:""}</text></g>`;
+  flowChartWrap.innerHTML=`<svg class="flow-chart" viewBox="0 0 ${width} ${height}" style="width:${width}px;height:${height}px" role="img" aria-label="Sales Rhythm ${flowModeLabel(flowMode)} ${flowView} chart">${legend}${grid}${todayLine}${marks}${labels}</svg>`;
+  if(todayIndex>=0)flowChartWrap.scrollLeft=Math.max(0,x(todayIndex)-flowChartWrap.clientWidth*.55);
 }
 
 function renderMonthlyFlow(){
-  const deals=flowSelectedDeals();
-  const m=flowMetrics(deals);
-  const role=String(profile?.role||"").toLowerCase();
-
-  let selected="Your performance";
-  if(role!=="user"){
-    const key=flowPerson.value||"all";
-    selected=key==="all"
-      ?"All salespeople"
-      :(flowPeople.find(p=>p.key===key)?.name||"Salesperson");
-  }
-
-  flowPeriod.textContent=`${monthLabelNow()} · ${selected}`;
-  const pendingStatus2=pendingDeliveriesForFlow();
-  const toBeDelivered=Number.isFinite(pendingStatus2)?pendingStatus2:m.toBeDelivered;
-
-  flowSummary.innerHTML=
-    `<div class="stat"><strong>${m.signedTotal}</strong><span>Signed</span></div>`+
-    `<div class="stat"><strong>${m.deliveredTotal}</strong><span>Delivered</span></div>`+
-    `<div class="stat"><strong>${toBeDelivered}</strong><span>To Be Delivered</span></div>`+
-    `<div class="stat"><strong>${m.productive}</strong><span>Productive Days</span></div>`;
-
-  m.toBeDelivered=toBeDelivered;
-
-  flowHand.dataset.level=m.level;
-  flowHand.innerHTML=`<strong>${m.title}</strong><p>${m.copy}</p>`;
-  const sev=m.level==="good"?0:(m.level==="bad"?(m.dryStreak>=5?4:m.dryStreak>=3?3:2):1);
-  rhythmPulse={loaded:true,level:m.level,severity:sev,title:m.title,metrics:m};
-  calculateMomentum();
-  flowDailyBtn.classList.toggle("on",flowView==="daily");
-  flowCumulativeBtn.classList.toggle("on",flowView==="cumulative");
-  renderFlowChart(m);
+  const deals=flowSelectedDeals(),m=flowMetrics(deals),role=String(profile?.role||"").toLowerCase();
+  let selected="Your performance";if(role!=="user"){const key=flowPerson.value||"all";selected=key==="all"?"All salespeople":(flowPeople.find(p=>p.key===key)?.name||"Salesperson")}
+  flowPeriod.textContent=`${monthLabelNow()} · ${selected} · ${flowModeLabel(flowMode)}`;
+  const pendingStatus2=pendingDeliveriesForFlow(),toBeDelivered=Number.isFinite(pendingStatus2)?pendingStatus2:m.toBeDelivered,deliveredMap=flowDeliveredChartData(m.days,deals),deliveredTotal=[...deliveredMap.values()].reduce((a,b)=>a+b,0);
+  const cards=[{mode:"signed",value:m.signedTotal,label:"Signed"},{mode:"delivered",value:deliveredTotal,label:"Delivered"},{mode:"pending",value:toBeDelivered,label:"To Be Delivered"},{mode:"productive",value:m.productive,label:"Productive Days"}];
+  flowSummary.innerHTML=cards.map(c=>`<button type="button" class="stat ${flowMode===c.mode?"active":""}" data-flow-mode="${c.mode}"><strong>${c.value}</strong><span>${c.label}</span></button>`).join("");
+  flowSummary.querySelectorAll("[data-flow-mode]").forEach(btn=>btn.onclick=()=>{flowMode=btn.dataset.flowMode||"full";renderMonthlyFlow()});
+  m.toBeDelivered=toBeDelivered;m.deliveredTotal=deliveredTotal;const coach=flowCoaching(m);flowHand.dataset.level=coach.level;flowHand.innerHTML=`<strong>${coach.title}</strong><p>${coach.copy}</p>`;
+  const sev=coach.level==="good"?0:(coach.level==="bad"?(m.dryStreak>=5?4:m.dryStreak>=3?3:2):1);rhythmPulse={loaded:true,level:coach.level,severity:sev,title:coach.title.replace(/^[^\w]+/,"").trim(),metrics:m};calculateMomentum();
+  flowFullBtn.classList.toggle("on",flowMode==="full");flowDailyBtn.classList.toggle("on",flowView==="daily");flowCumulativeBtn.classList.toggle("on",flowView==="cumulative");renderFlowChart(m);
 }
-
 async function openMonthlyFlow(){
-  const role=String(profile?.role||"").toLowerCase();
-  if(!["admin","manager","user"].includes(role))return;
-
-  overlay.classList.remove("hidden");
-  flowModal.classList.remove("hidden");
-  flowSummary.innerHTML=`<div class="stat"><strong>…</strong><span>Loading Sales Rhythm</span></div>`;
-  flowHand.dataset.level="watch";
-  flowHand.innerHTML=`<strong>READING THE MONTH</strong><p>Pulling current-month sales activity…</p>`;
-  flowChartWrap.innerHTML=`<div class="flow-empty">Loading Sales Rhythm…</div>`;
-
+  const role=String(profile?.role||"").toLowerCase();if(!["admin","manager","user"].includes(role))return;
+  overlay.classList.remove("hidden");flowModal.classList.remove("hidden");flowSummary.innerHTML=`<div class="stat"><strong>…</strong><span>Loading Sales Rhythm</span></div>`;flowHand.dataset.level="watch";flowHand.innerHTML=`<strong>READING THE MONTH</strong><p>Pulling current-month sales and delivery activity…</p>`;flowChartWrap.innerHTML=`<div class="flow-empty">Loading Sales Rhythm…</div>`;
   try{
-    await loadMonthlyFlow();
-
-    if(role==="user"){
-      flowPerson.innerHTML=`<option value="self">My performance</option>`;
-      flowPerson.value="self";
-      flowPerson.disabled=true;
-      flowPerson.classList.add("hidden");
-    }else{
-      flowPerson.disabled=false;
-      flowPerson.classList.remove("hidden");
-      flowPerson.innerHTML=`<option value="all">All salespeople</option>`+
-        flowPeople.map(p=>`<option value="${p.key.replace(/"/g,"&quot;")}">${p.name} · ${p.count} deal${p.count===1?"":"s"}</option>`).join("");
-      flowPerson.value="all";
-    }
-
-    flowView="daily";
-    renderMonthlyFlow();
-  }catch(e){
-    console.error("Sales Rhythm:",e);
-    flowSummary.innerHTML="";
-    flowHand.dataset.level="bad";
-    flowHand.innerHTML=`<strong>SALES RHYTHM UNAVAILABLE</strong><p>${e?.message||"Unable to load current-month sales activity."}</p>`;
-    flowChartWrap.innerHTML="";
-  }
+    await Promise.all([loadMonthlyFlow(),loadDeliveryPulse()]);rebuildFlowPeople();
+    if(role==="user"){flowPerson.innerHTML=`<option value="self">My performance</option>`;flowPerson.value="self";flowPerson.disabled=true;flowPerson.classList.add("hidden")}
+    else{flowPerson.disabled=false;flowPerson.classList.remove("hidden");flowPerson.innerHTML=`<option value="all">All salespeople</option>`+flowPeople.map(p=>`<option value="${p.key.replace(/"/g,"&quot;")}">${p.name} · ${p.signed} signed · ${p.delivered} delivered · ${p.pending} pending</option>`).join("");flowPerson.value="all"}
+    flowView="daily";flowMode="full";renderMonthlyFlow();
+  }catch(e){console.error("Sales Rhythm:",e);flowSummary.innerHTML="";flowHand.dataset.level="bad";flowHand.innerHTML=`<strong>SALES RHYTHM UNAVAILABLE</strong><p>${e?.message||"Unable to load current-month sales activity."}</p>`;flowChartWrap.innerHTML=""}
 }
-
 function severityEmoji(level){return level>=4?"☠️":level===3?"🌊":level===2?"🔥":level===1?"🌶️":"✓"}
 function severityClass(level){return level>=2?"bad":level===1?"warn":"ok"}
-function appointmentSeverity(){const overdue=Math.max(0,Number(appointmentPulse.overdue||0));let sev=overdue>=6?4:overdue>=4?3:overdue>=2?2:overdue>=1?1:0;if(Number.isFinite(appointmentPulse.upcoming)){const gap=Math.max(0,4-Number(appointmentPulse.upcoming));sev=Math.max(sev,gap>=4?3:gap>=3?2:gap>=1?1:0)}return sev}
+function appointmentSeverity(){const overdue=Math.max(0,Number(appointmentPulse.overdue||0));let sev=overdue>=6?4:overdue>=4?3:overdue>=2?2:overdue>=1?1:0;if(Number.isFinite(appointmentPulse.upcoming)){const target=Math.max(1,Number(appointmentPulse.target||4));const gap=Math.max(0,target-Number(appointmentPulse.upcoming));const ratio=gap/target;sev=Math.max(sev,ratio>=.75?3:ratio>=.45?2:ratio>0?1:0)}return sev}
 function deliverySeverity(){const n=Math.max(0,Number(counts.delivery||0));return n>=8?4:n>=5?3:n>=3?2:n>=1?1:0}
 function rhythmSeverity(){return rhythmPulse.loaded?Number(rhythmPulse.severity||0):0}
 function pulseSnapshot(){return{appointments:appointmentSeverity(),delivery:deliverySeverity(),flow:rhythmSeverity()}}
@@ -1332,78 +1310,28 @@ function maybeAlertOnWorsening(){const next=pulseSnapshot();if(lastSeveritySnaps
 async function liveAxisToken(){const {data}=await client.auth.getSession();return data.session?.access_token||null}
 async function loadDeliveryPulse(){try{const token=await liveAxisToken();if(!token)throw new Error("AXIS session expired.");const r=await fetch(DELIVERY_FEED_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({month:melbourneTodayKey().slice(0,7)})});let j={};try{j=await r.json()}catch{}if(!r.ok||!j.ok)throw new Error(j.error||"Delivery feed unavailable.");deliveryPulse={loaded:true,pending:Number(j.counts?.pending||0),delivered:Number(j.counts?.delivered||0),processed:Number(j.counts?.processed||0),count:Number(j.count||0),scope:j.scope||"all",deals:Array.isArray(j.deals)?j.deals:[],error:null};return deliveryPulse}catch(e){deliveryPulse={...deliveryPulse,loaded:false,error:e?.message||"Unavailable"};console.warn("AXIS delivery pulse:",e);return deliveryPulse}}
 async function loadAppointmentPulse(){
-  appointmentPulse.overdue=Math.max(0,Number(counts.appointments||0));
-
   const role=String(profile?.role||"").toLowerCase();
-
-  // The League response already contains the live Appointment Tracker metrics.
-  // Use that as the source of truth for the visible MTD count.
-  if(role==="user"){
-    appointmentPulse.monthly=Number(myLeague?.appointmentMetrics?.appointments||0);
-  }else{
-    appointmentPulse.monthly=leagueRows.reduce(
-      (sum,u)=>sum+Number(u?.appointmentMetrics?.appointments||0),
-      0
-    );
-  }
-
-  // Keep trying the appointment-insights endpoint only for the upcoming Saturday
-  // field. If it isn't exposed yet, leave that line in "syncing" state.
   try{
-    const token=await liveAxisToken();
-    if(!token)throw new Error("No session");
-
-    const r=await fetch(APPOINTMENT_INSIGHTS_ENDPOINT,{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json",
-        "Authorization":"Bearer "+token
-      },
-      body:JSON.stringify({month:melbourneTodayKey().slice(0,7)})
-    });
-
-    let j={};
-    try{j=await r.json()}catch{}
-    if(!r.ok||!j.ok)throw new Error(j.error||"Appointment insights unavailable");
-
-    const users=Array.isArray(j.users)?j.users:[];
-    let upcoming=null;
-
+    const token=await liveAxisToken();if(!token)throw new Error("No session");
+    const r=await fetch(APPOINTMENT_INSIGHTS_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({month:melbourneTodayKey().slice(0,7)})});
+    let j={};try{j=await r.json()}catch{}if(!r.ok||!j.ok)throw new Error(j.error||"Appointment insights unavailable");
+    const users=Array.isArray(j.users)?j.users:[],totals=j?.totals&&typeof j.totals==="object"?j.totals:{};
+    appointmentPulse.activeSalespeople=Math.max(0,Number(totals.active_salespeople||users.length||0));
     if(role==="user"){
-      const email=String(profile?.email||"").trim().toLowerCase();
-      const name=`${profile?.first_name||""} ${profile?.last_name||""}`.trim().toLowerCase();
-
-      const me=
-        users.find(u=>String(u.email||"").trim().toLowerCase()===email)||
-        users.find(u=>String(u.name||u.salesperson_name||"").trim().toLowerCase()===name);
-
-      const raw=
-        me?.upcoming ??
-        me?.upcoming_saturday ??
-        me?.saturday_appointments ??
-        me?.next_saturday;
-
-      if(Number.isFinite(Number(raw)))upcoming=Number(raw);
+      const email=String(profile?.email||"").trim().toLowerCase(),name=`${profile?.first_name||""} ${profile?.last_name||""}`.trim().toLowerCase();
+      const me=users.find(u=>String(u.email||"").trim().toLowerCase()===email)||users.find(u=>String(u.name||"").trim().toLowerCase()===name),metrics=me?.metrics||{};
+      appointmentPulse.monthly=Math.max(0,Number(metrics.appointments||0));
+      appointmentPulse.overdue=Math.max(0,Number(metrics.needs_updating??metrics.overdue_unupdated??0));
+      appointmentPulse.upcoming=Math.max(0,Number(metrics.upcoming_saturday||0));
+      appointmentPulse.target=4;
     }else{
-      const vals=users
-        .map(u=>
-          u?.upcoming ??
-          u?.upcoming_saturday ??
-          u?.saturday_appointments ??
-          u?.next_saturday
-        )
-        .filter(v=>Number.isFinite(Number(v)))
-        .map(Number);
-
-      if(vals.length)upcoming=vals.reduce((a,b)=>a+b,0);
+      appointmentPulse.monthly=Math.max(0,Number(totals.appointments||0));
+      appointmentPulse.overdue=Math.max(0,Number(totals.needs_updating??totals.overdue_unupdated??0));
+      appointmentPulse.upcoming=Math.max(0,Number(totals.upcoming_saturday||0));
+      appointmentPulse.target=Math.max(4,appointmentPulse.activeSalespeople*4);
     }
-
-    appointmentPulse.upcoming=upcoming;
-  }catch(e){
-    appointmentPulse.upcoming=null;
-  }
-
-  appointmentPulse.loaded=true;
+    appointmentPulse.loaded=true;
+  }catch(e){appointmentPulse.loaded=false;console.warn("AXIS appointment pulse:",e)}
   return appointmentPulse;
 }
 
@@ -1413,26 +1341,10 @@ function normalisePersonKey(v){
 
 function pendingDeliveriesForFlow(){
   if(!deliveryPulse.loaded)return null;
-
-  const role=String(profile?.role||"").toLowerCase();
   const pendingDeals=(deliveryPulse.deals||[]).filter(d=>Number(d?.status)===2);
-
-  if(role==="user")return pendingDeals.length;
-
-  const selected=flowPerson?.value||"all";
-  if(selected==="all")return pendingDeals.length;
-
-  const person=flowPeople.find(p=>p.key===selected);
-  if(!person)return 0;
-
-  const wantedEmail=normalisePersonKey(person.email);
-  const wantedName=normalisePersonKey(person.name);
-
-  return pendingDeals.filter(d=>{
-    const email=normalisePersonKey(d?.salesperson_email);
-    const name=normalisePersonKey(d?.salesperson_name);
-    return (wantedEmail&&email===wantedEmail)||(wantedName&&name===wantedName);
-  }).length;
+  if(String(profile?.role||"").toLowerCase()==="user")return pendingDeals.length;
+  const person=selectedFlowPerson();
+  return person?pendingDeals.filter(d=>flowDealMatchesPerson(d,person)).length:pendingDeals.length;
 }
 
 function deliveryDateKey(d){
@@ -1443,27 +1355,20 @@ function deliveryDateKey(d){
 
 function selectedPendingDeliveryDeals(){
   if(!deliveryPulse.loaded)return [];
-
-  const role=String(profile?.role||"").toLowerCase();
   const pending=(deliveryPulse.deals||[]).filter(d=>Number(d?.status)===2);
-
-  if(role==="user")return pending;
-
-  const selected=flowPerson?.value||"all";
-  if(selected==="all")return pending;
-
-  const person=flowPeople.find(p=>p.key===selected);
-  if(!person)return [];
-
-  const wantedEmail=normalisePersonKey(person.email);
-  const wantedName=normalisePersonKey(person.name);
-
-  return pending.filter(d=>{
-    const email=normalisePersonKey(d?.salesperson_email);
-    const name=normalisePersonKey(d?.salesperson_name);
-    return (wantedEmail&&email===wantedEmail)||(wantedName&&name===wantedName);
-  });
+  if(String(profile?.role||"").toLowerCase()==="user")return pending;
+  const person=selectedFlowPerson();
+  return person?pending.filter(d=>flowDealMatchesPerson(d,person)):pending;
 }
+function selectedDeliveredDeliveryDeals(){
+  if(!deliveryPulse.loaded)return [];
+  const delivered=(deliveryPulse.deals||[]).filter(d=>[5,6].includes(Number(d?.status)));
+  if(String(profile?.role||"").toLowerCase()==="user")return delivered;
+  const person=selectedFlowPerson();
+  return person?delivered.filter(d=>flowDealMatchesPerson(d,person)):delivered;
+}
+function deliveryActualDateKey(d){return String(d?.delivery_date||d?.actual_delivered_date||"").slice(0,10)}
+
 
 function pendingDeliveryChartData(days){
   const map=new Map(days.map(d=>[d.key,0]));
@@ -1488,7 +1393,17 @@ function pendingDeliveryChartData(days){
 
 async function loadRhythmPulse(){try{await loadMonthlyFlow();const m=flowMetrics(flowDeals);const sev=m.level==="good"?0:(m.level==="bad"?(m.dryStreak>=5?4:m.dryStreak>=3?3:2):1);rhythmPulse={loaded:true,level:m.level,severity:sev,title:m.title,metrics:m};return rhythmPulse}catch(e){console.warn("AXIS rhythm pulse:",e);return rhythmPulse}}
 async function refreshOperationalPulse(){await Promise.allSettled([loadDeliveryPulse(),loadAppointmentPulse(),loadRhythmPulse()]);calculateMomentum();renderTiles();maybeAlertOnWorsening()}
-function renderOperationalTile(t){if(t.key==="appointments"){const sev=appointmentSeverity(),over=Number(appointmentPulse.overdue||0),sat=appointmentPulse.upcoming,monthly=Number(appointmentPulse.monthly||0);const satLine=Number.isFinite(sat)?`📅 ${sat}/${appointmentPulse.target} Saturday`:`📅 Saturday target syncing`;return `<div class="tile-top"><div class="icon">${t.icon}</div><div class="badge ${severityClass(sev)}">${monthly}</div></div><div><h2>${t.name}</h2><p>${t.desc}</p><div class="tile-status-lines"><div class="tile-status-line">📅 ${monthly} appointment${monthly===1?"":"s"} MTD</div><div class="tile-status-line">${over?`⚑ ${over} need outcome`:`✓ Past appointments updated`}</div><div class="tile-status-line muted">${satLine}</div></div></div><div class="tile-bottom"><span>${String(profile?.role||"").toLowerCase()==="user"?"Your appointment position":"Team appointment position"}</span><strong>OPEN ↗</strong></div>`}if(t.key==="delivery"){const sev=deliverySeverity(),intro=Number(counts.delivery||0),d=deliveryPulse;const live=d.loaded?`${d.pending} pending · ${d.delivered+d.processed} delivered`:`Delivery feed syncing`;return `<div class="tile-top"><div class="icon">${t.icon}</div><div class="badge ${severityClass(sev)}"><span class="tile-severity">${severityEmoji(sev)}</span></div></div><div><h2>${t.name}</h2><p>${t.desc}</p><div class="tile-status-lines"><div class="tile-status-line">${intro?`🤝 ${intro} service intro${intro===1?"":"s"} outstanding`:`✓ Service introductions clear`}</div><div class="tile-status-line muted">🚗 ${live}</div></div></div><div class="tile-bottom"><span>${d.scope==="self"?"Your delivery position":"All delivery position"}</span><strong>OPEN ↗</strong></div>`}return tileHtml(t)}
+function renderOperationalTile(t){
+  if(t.key==="appointments"){
+    const sev=appointmentSeverity(),needs=Number(appointmentPulse.overdue||0),sat=Number(appointmentPulse.upcoming||0),monthly=Number(appointmentPulse.monthly||0),target=Number(appointmentPulse.target||4);
+    return `<div class="tile-top"><div class="icon">${t.icon}</div><div class="badge ${severityClass(sev)}">${sat}</div></div><div><h2>${t.name}</h2><p>${t.desc}</p><div class="tile-status-lines"><div class="tile-status-line">📅 ${monthly} appointment${monthly===1?"":"s"} MTD</div><div class="tile-status-line">${needs?`🔥 ${needs} need updating`:`✓ Past appointments cleared`}</div><div class="tile-status-line muted">📅 ${sat}/${target} this Saturday</div></div></div><div class="tile-bottom"><span>${String(profile?.role||"").toLowerCase()==="user"?"Your appointment position":"Team appointment position"}</span><strong>OPEN ↗</strong></div>`;
+  }
+  if(t.key==="delivery"){
+    const sev=deliverySeverity(),intro=Number(counts.delivery||0),d=deliveryPulse,live=d.loaded?`${d.pending} pending · ${d.delivered+d.processed} delivered`:`Delivery feed syncing`;
+    return `<div class="tile-top"><div class="icon">${t.icon}</div><div class="badge ${severityClass(sev)}"><span class="tile-severity">${severityEmoji(sev)}</span></div></div><div><h2>${t.name}</h2><p>${t.desc}</p><div class="tile-status-lines"><div class="tile-status-line">${intro?`🤝 ${intro} service intro${intro===1?"":"s"} outstanding`:`✓ Service introductions clear`}</div><div class="tile-status-line muted">🚗 ${live}</div></div></div><div class="tile-bottom"><span>${d.scope==="self"?"Your delivery position":"All delivery position"}</span><strong>OPEN ↗</strong></div>`;
+  }
+  return tileHtml(t);
+}
 
 function weatherEmoji(code,wind){
   const c=Number(code);
@@ -1643,8 +1558,8 @@ function renderTiles(){
       const sev=a.key==="appointments"?appointmentSeverity():a.key==="delivery"?deliverySeverity():0;
       let mobileBody="";
       if(a.key==="appointments"){
-        const over=Number(appointmentPulse.overdue||0),sat=appointmentPulse.upcoming,monthly=Number(appointmentPulse.monthly||0);
-        mobileBody=`<div class="mobile-status"><span>📅 ${monthly} appointment${monthly===1?"":"s"} MTD</span><span>${over?`⚑ ${over} need outcome`:`✓ Past appointments updated`}</span><span class="muted">${Number.isFinite(sat)?`📅 ${sat}/${appointmentPulse.target} Saturday`:`📅 Saturday target syncing`}</span></div>`;
+        const over=Number(appointmentPulse.overdue||0),sat=Number(appointmentPulse.upcoming||0),monthly=Number(appointmentPulse.monthly||0),target=Number(appointmentPulse.target||4);
+        mobileBody=`<div class="mobile-status"><span>📅 ${monthly} appointment${monthly===1?"":"s"} MTD</span><span>${over?`🔥 ${over} need updating`:`✓ Past appointments cleared`}</span><span class="muted">📅 ${sat}/${target} this Saturday</span></div>`;
       }else if(a.key==="delivery"){
         const intro=Number(counts.delivery||0);
         mobileBody=`<div class="mobile-status"><span>${intro?`🤝 ${intro} service intro${intro===1?"":"s"} outstanding`:`✓ Service introductions clear`}</span><span class="muted">${deliveryPulse.loaded?`🚗 ${deliveryPulse.pending} pending · ${deliveryPulse.delivered+deliveryPulse.processed} delivered`:`🚗 Delivery feed syncing`}</span></div>`;
@@ -1652,7 +1567,7 @@ function renderTiles(){
         mobileBody=`<small>${a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date")}</small>`;
       }
       m.classList.add(`sev-${sev}`);
-      const mobileBadge=a.key==="appointments"?Number(appointmentPulse.monthly||0):(a.external?"↗":severityEmoji(sev));
+      const mobileBadge=a.key==="appointments"?Number(appointmentPulse.upcoming||0):(a.external?"↗":severityEmoji(sev));
       m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong>${mobileBody}</div><div class="badge ${severityClass(sev)}">${mobileBadge}</div>`;
     }m.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);mob.appendChild(m);
   });
@@ -1681,14 +1596,14 @@ function renderTiles(){
 }
 
 async function refreshCounts(){
-  try{const {data,error}=await client.rpc("axis_notification_counts");if(error)throw error;counts={};(data||[]).forEach(r=>counts[r.app_key]=Number(r.notification_count||0));appointmentPulse.overdue=Number(counts.appointments||0);return counts}catch(e){console.warn(e);return counts}
+  try{const {data,error}=await client.rpc("axis_notification_counts");if(error)throw error;counts={};(data||[]).forEach(r=>counts[r.app_key]=Number(r.notification_count||0));return counts}catch(e){console.warn(e);return counts}
 }
 function startTimer(){
   if(timer)clearInterval(timer);
   timer=setInterval(async()=>{await refreshCounts();await refreshOperationalPulse()},60000);
   setInterval(loadWeather,45*60*1000);
 }
-function updateSummary(){const total=Math.max(0,Number(counts.appointments||0))+Math.max(0,Number(counts.delivery||0));openActions.textContent=total;const worst=Math.max(appointmentSeverity(),deliverySeverity(),rhythmSeverity());summary.textContent=worst>=4?`☠️ Critical actions need attention.`:worst===3?`🌊 Pressure is building across AXIS.`:worst===2?`🔥 There are items that need attention now.`:worst===1?`🌶️ A few things are starting to slip.`:"Your systems are up to date."}
+function updateSummary(){const total=Math.max(0,Number(appointmentPulse.overdue||0))+Math.max(0,Number(counts.delivery||0));openActions.textContent=total;const worst=Math.max(appointmentSeverity(),deliverySeverity(),rhythmSeverity());summary.textContent=worst>=4?`☠️ Critical actions need attention.`:worst===3?`🌊 Pressure is building across AXIS.`:worst===2?`🔥 There are items that need attention now.`:worst===1?`🌶️ A few things are starting to slip.`:"Your systems are up to date."}
 async function recordLaunch(key){
   try{
     const {error}=await client.from("app_launches").insert({user_id:profile.id,app_key:key});
@@ -1970,6 +1885,7 @@ closeUsers.onclick=closeAll;addStaffBtn.onclick=openAddStaff;closeAddStaff.oncli
 closeEdit.onclick=()=>{editModal.classList.add("hidden");usersModal.classList.remove("hidden")};saveUser.onclick=saveEditing;resetPin.onclick=resetEditingPin;toggleActive.onclick=toggleEditingActive;
 closeInsights.onclick=closeAll;closeLeague.onclick=closeAll;closeFlow.onclick=closeAll;
 flowPerson.onchange=renderMonthlyFlow;
+flowFullBtn.onclick=()=>{flowMode="full";renderMonthlyFlow()};
 flowDailyBtn.onclick=()=>{flowView="daily";renderMonthlyFlow()};
 flowCumulativeBtn.onclick=()=>{flowView="cumulative";renderMonthlyFlow()};
 
