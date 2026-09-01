@@ -333,6 +333,38 @@ button{cursor:pointer}
 }
 
 
+
+/* AXIS operational pulse */
+.tile-status-lines{display:grid;gap:5px;margin-top:11px;position:relative;z-index:1}
+.tile-status-line{display:flex;align-items:center;gap:7px;font-size:10px;color:#d7d0dc;line-height:1.3}
+.tile-status-line.muted{color:var(--muted)}
+.tile-severity{font-size:20px;line-height:1;filter:saturate(.95)}
+.tile.sev-1,.mobile-tile.sev-1{border-color:rgba(242,184,92,.32)!important}
+.tile.sev-2,.mobile-tile.sev-2{border-color:rgba(255,146,94,.38)!important}
+.tile.sev-3,.mobile-tile.sev-3{border-color:rgba(255,107,120,.42)!important;box-shadow:0 22px 64px rgba(255,107,120,.12),inset 4px 0 0 rgba(255,107,120,.72)!important}
+.tile.sev-4,.mobile-tile.sev-4{border-color:rgba(255,107,120,.55)!important;box-shadow:0 24px 72px rgba(255,107,120,.18),inset 4px 0 0 rgba(255,107,120,.90)!important}
+@keyframes axisUrgentPulse{0%,100%{box-shadow:0 24px 72px rgba(255,107,120,.14),inset 4px 0 0 rgba(255,107,120,.82)}50%{box-shadow:0 24px 84px rgba(255,107,120,.28),inset 4px 0 0 rgba(255,107,120,1)}}
+.tile.sev-4{animation:axisUrgentPulse 2.7s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.tile.sev-4{animation:none}}
+.momentum-chip{cursor:pointer;color:#fff;appearance:none;-webkit-appearance:none}
+.momentum-chip:hover{border-color:rgba(255,255,255,.18)}
+.momentum-shield{width:36px;height:40px;display:grid;place-items:center;clip-path:polygon(50% 0,92% 13%,84% 70%,50% 100%,16% 70%,8% 13%);background:rgba(255,255,255,.15);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+.momentum-shield strong{font-size:11px!important;color:#111;text-shadow:none}
+.momentum-shield.white{background:linear-gradient(145deg,#fff,#cfcbd2)}
+.momentum-shield.bronze{background:linear-gradient(145deg,#e7b27b,#8f5d34)}
+.momentum-shield.green{background:linear-gradient(145deg,#8df0ba,#399b6c)}
+.momentum-shield.purple{background:linear-gradient(145deg,#c4afff,#7954df)}
+.momentum-shield.silver{background:linear-gradient(145deg,#f3f4f6,#9da4af)}
+.momentum-shield.gold{background:linear-gradient(145deg,#ffe799,#c99a26)}
+.momentum-shield.platinum{background:linear-gradient(145deg,#fff,#aeeaff 45%,#d7bbff)}
+.momentum-copy{display:grid;gap:1px;text-align:left}
+.momentum-copy strong{font-size:10px!important;line-height:1.1;white-space:nowrap}
+.momentum-copy small{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.09em}
+#flowModal{width:min(1440px,calc(100vw - 28px));max-height:calc(100vh - 28px)}
+#flowModal .flow-chart{height:430px}
+.flow-value{font-size:10px;fill:#f7f4fa;font-weight:800;paint-order:stroke;stroke:rgba(20,16,25,.95);stroke-width:3px;stroke-linejoin:round}
+@media(max-width:700px){#flowModal{inset:8px;left:8px;top:8px;transform:none;width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:none;border-radius:22px;padding:16px}#flowModal .flow-chart{height:390px}.flow-chart-wrap{margin-left:-4px;margin-right:-4px}.momentum-copy{display:none}.momentum-chip{padding:5px 7px}.momentum-shield{width:32px;height:36px}}
+
 /* Sales Rhythm */
 .tile[data-app="flow"],.mobile-tile[data-app="flow"]{
   border-color:rgba(255,146,94,.30)!important;
@@ -472,7 +504,7 @@ button{cursor:pointer}
       <div><div class="top-wordmark">AXIS</div><div class="top-copy">© 2026</div></div>
       <div class="top-actions">
         <div id="weatherChip" class="weather-chip"><strong>—°</strong><small>Blackburn</small></div>
-        <div class="axis-score-chip"><strong id="axisPoints">—</strong><span>AXIS pts</span><strong id="axisRank">#—</strong></div>
+        <button id="momentumChip" class="axis-score-chip momentum-chip" type="button" title="AXIS Momentum"><span id="momentumShield" class="momentum-shield white"><strong id="axisPoints">—</strong></span><span class="momentum-copy"><strong id="axisRank">Building</strong><small>Momentum</small></span></button>
         <div class="connected">Connected</div>
         <button id="profileBtn" class="userbtn"><span id="avatar" class="avatar">AX</span><span id="userName"></span></button>
       </div>
@@ -632,6 +664,7 @@ const APPOINTMENT_INSIGHTS_ENDPOINT=SUPABASE_URL+"/functions/v1/appointment-insi
 const LEAGUE_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-league";
 const ORACLE_INSIGHTS_ENDPOINT=SUPABASE_URL+"/functions/v1/oracle-insights";
 const MONTHLY_FLOW_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-monthly-flow";
+const DELIVERY_FEED_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-deliveries";
 const CREATE_USER_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-admin-create-user";
 const PIN_WINDOW=30*24*60*60*1000, PIN_KEY="axis_pin_authenticated_at";
 
@@ -640,6 +673,11 @@ let profile=null,session=null,counts={},timer=null,staff=[],editing=null;
 let recoveryMode=false;
 let leagueRows=[],myLeague=null,scoreData={month:0,lifetime:0,rank:null,launches:0};
 let flowDeals=[],flowPeople=[],flowMonth="",flowView="daily";
+let deliveryPulse={loaded:false,pending:0,delivered:0,processed:0,count:0,scope:"all",deals:[],error:null};
+let appointmentPulse={overdue:0,upcoming:null,target:4,loaded:false};
+let rhythmPulse={loaded:false,level:"watch",severity:1,title:"READING RHYTHM",metrics:null};
+let momentumData={score:null,label:"Building",tier:"white"};
+let audioUnlocked=false,lastSeveritySnapshot=null;
 
 const apps=[
   {key:"appointments",name:"Appointments",icon:"📅",desc:"Appointment control",url:"https://autopact-blackburn.github.io/Blackburn-Appointment-Tracker/",field:"appointment_access"},
@@ -921,17 +959,10 @@ async function loadAxisLeague(){
     console.warn("AXIS League unavailable",e);
   }
 }
-function renderScoreChip(){
-  const points=document.getElementById("axisPoints"),rank=document.getElementById("axisRank");
-  if(!points||!rank||!profile)return;
-  if(profile.role==="user"){
-    points.textContent=scoreData.month;
-    rank.textContent=scoreData.rank?`#${scoreData.rank}`:"#—";
-  }else{
-    points.textContent="AXIS";
-    rank.textContent=profile.role==="admin"?"Admin":"Manager";
-  }
-}
+function renderScoreChip(){renderMomentumChip()}
+function momentumRank(score){const n=Math.max(0,Math.min(100,Math.round(Number(score)||0)));if(n>=98)return{label:"AXIS Prime",tier:"platinum"};if(n>=90)return{label:"Field Marshal",tier:"gold"};if(n>=75)return{label:"Commander",tier:"silver"};if(n>=60)return{label:"Lieutenant",tier:"purple"};if(n>=45)return{label:"Specialist",tier:"green"};if(n>=30)return{label:"Operator",tier:"bronze"};return{label:"Cadet",tier:"white"}}
+function calculateMomentum(){const components=[];const overdue=Math.max(0,Number(appointmentPulse.overdue||0));components.push({weight:30,score:Math.max(0,100-overdue*18)});if(Number.isFinite(appointmentPulse.upcoming))components.push({weight:25,score:Math.min(100,Math.max(0,Number(appointmentPulse.upcoming)/4*100))});const intros=Math.max(0,Number(counts.delivery||0));components.push({weight:20,score:Math.max(0,100-intros*15)});if(rhythmPulse.loaded){let rs=rhythmPulse.level==="good"?100:rhythmPulse.level==="bad"?28:65;if(rhythmPulse.severity>=4)rs=10;components.push({weight:25,score:rs})}const weight=components.reduce((a,c)=>a+c.weight,0)||1;const score=Math.round(components.reduce((a,c)=>a+c.score*c.weight,0)/weight);const rank=momentumRank(score);momentumData={score,label:rank.label,tier:rank.tier};renderMomentumChip();return momentumData}
+function renderMomentumChip(){const points=document.getElementById("axisPoints"),rank=document.getElementById("axisRank"),shield=document.getElementById("momentumShield");if(!points||!rank||!shield)return;if(momentumData.score===null){points.textContent="—";rank.textContent="Building";return}points.textContent=momentumData.score;rank.textContent=momentumData.label;shield.className=`momentum-shield ${momentumData.tier}`}
 function renderLeagueTileHtml(){
   const top=leagueRows.slice(0,3);
   const pod=top.map(r=>`<div class="league-mini"><b>#${r.rank} ${r.name.split(" ")[0]}</b><span>${r.monthlyScore} score</span></div>`).join("");
@@ -1103,6 +1134,7 @@ function flowMetrics(deals){
   const zeroRate=elapsed.length?zero/elapsed.length:0;
   const last3=elapsedCounts.slice(-3).reduce((a,b)=>a+b,0);
   const first5=elapsedCounts.slice(0,5).reduce((a,b)=>a+b,0);
+  let dryStreak=0;for(let i=elapsedCounts.length-1;i>=0&&elapsedCounts[i]===0;i--)dryStreak++;
 
   let level="watch",title="INCONSISTENT RHYTHM",copy="The month is moving, but the daily pattern is uneven. Consistency now prevents the late-month scramble.";
   if(elapsed.length>=3&&last3===0){
@@ -1115,7 +1147,7 @@ function flowMetrics(deals){
     level="good";title="STRONG RHYTHM";copy=`Sign-ups have landed on ${productive} of ${elapsed.length} working days. Keep the pressure spread across the month.`;
   }
 
-  return {days,signupCounts,deliveredCounts,expectedCounts,elapsed,signedTotal,deliveredTotal,toBeDelivered,productive,zero,zeroRate,last3,first5,level,title,copy};
+  return {days,signupCounts,deliveredCounts,expectedCounts,elapsed,signedTotal,deliveredTotal,toBeDelivered,productive,zero,zeroRate,last3,first5,dryStreak,level,title,copy};
 }
 
 function renderFlowChart(metrics){
@@ -1131,7 +1163,7 @@ function renderFlowChart(metrics){
     :daily.reduce((arr,n,i)=>{arr.push(n+(arr[i-1]||0));return arr},[]);
   const max=Math.max(1,...values);
   const width=Math.max(760,days.length*46);
-  const height=330,padL=42,padR=18,padT=24,padB=58;
+  const height=430,padL=46,padR=24,padT=38,padB=78;
   const plotW=width-padL-padR,plotH=height-padT-padB;
   const x=i=>padL+(days.length===1?plotW/2:i*(plotW/(days.length-1)));
   const y=v=>padT+plotH-(v/max)*plotH;
@@ -1152,15 +1184,15 @@ function renderFlowChart(metrics){
     const barW=Math.min(24,slot*.58);
     marks=values.map((v,i)=>{
       const top=y(v),h=padT+plotH-top;
-      return `<rect class="flow-bar" x="${x(i)-barW/2}" y="${top}" width="${barW}" height="${Math.max(v?3:0,h)}" rx="5"></rect>`;
+      return `<rect class="flow-bar" x="${x(i)-barW/2}" y="${top}" width="${barW}" height="${Math.max(v?3:0,h)}" rx="5"></rect>${v?`<text class="flow-value" x="${x(i)}" y="${Math.max(14,top-8)}" text-anchor="middle">${v}</text>`:""}`;
     }).join("");
   }else{
     const pts=values.map((v,i)=>`${x(i)},${y(v)}`).join(" ");
     marks=`<polyline class="flow-line" points="${pts}"></polyline>`+
-      values.map((v,i)=>`<circle class="flow-dot" cx="${x(i)}" cy="${y(v)}" r="4"></circle>`).join("");
+      values.map((v,i)=>`<circle class="flow-dot" cx="${x(i)}" cy="${y(v)}" r="4"></circle><text class="flow-value" x="${x(i)}" y="${Math.max(14,y(v)-10)}" text-anchor="middle">${v}</text>`).join("");
   }
 
-  const labels=days.map((d,i)=>`<text class="flow-axis" transform="translate(${x(i)-2},${height-20}) rotate(-50)" text-anchor="end">${d.day}-${String(flowMonth).slice(5)}</text>`).join("");
+  const labels=days.map((d,i)=>`<text class="flow-axis" transform="translate(${x(i)-2},${height-28}) rotate(-50)" text-anchor="end">${d.day}-${String(flowMonth).slice(5)}</text>`).join("");
 
   flowChartWrap.innerHTML=`<svg class="flow-chart" viewBox="0 0 ${width} ${height}" style="width:${width}px" role="img" aria-label="Sales Rhythm ${flowView} chart">${grid}${todayLine}${marks}${labels}</svg>`;
   if(todayIndex>=0){
@@ -1191,6 +1223,9 @@ function renderMonthlyFlow(){
 
   flowHand.dataset.level=m.level;
   flowHand.innerHTML=`<strong>${m.title}</strong><p>${m.copy}</p>`;
+  const sev=m.level==="good"?0:(m.level==="bad"?(m.dryStreak>=5?4:m.dryStreak>=3?3:2):1);
+  rhythmPulse={loaded:true,level:m.level,severity:sev,title:m.title,metrics:m};
+  calculateMomentum();
   flowDailyBtn.classList.toggle("on",flowView==="daily");
   flowCumulativeBtn.classList.toggle("on",flowView==="cumulative");
   renderFlowChart(m);
@@ -1234,6 +1269,22 @@ async function openMonthlyFlow(){
   }
 }
 
+function severityEmoji(level){return level>=4?"☠️":level===3?"🌊":level===2?"🔥":level===1?"🌶️":"✓"}
+function severityClass(level){return level>=2?"bad":level===1?"warn":"ok"}
+function appointmentSeverity(){const overdue=Math.max(0,Number(appointmentPulse.overdue||0));let sev=overdue>=6?4:overdue>=4?3:overdue>=2?2:overdue>=1?1:0;if(Number.isFinite(appointmentPulse.upcoming)){const gap=Math.max(0,4-Number(appointmentPulse.upcoming));sev=Math.max(sev,gap>=4?3:gap>=3?2:gap>=1?1:0)}return sev}
+function deliverySeverity(){const n=Math.max(0,Number(counts.delivery||0));return n>=8?4:n>=5?3:n>=3?2:n>=1?1:0}
+function rhythmSeverity(){return rhythmPulse.loaded?Number(rhythmPulse.severity||0):0}
+function pulseSnapshot(){return{appointments:appointmentSeverity(),delivery:deliverySeverity(),flow:rhythmSeverity()}}
+function unlockAxisAudio(){if(audioUnlocked)return;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;window.__axisAudio=window.__axisAudio||new C();if(window.__axisAudio.state==="suspended")window.__axisAudio.resume();audioUnlocked=true}catch{}}
+function playAxisAlert(level){if(!audioUnlocked||document.visibilityState!=="visible")return;try{const ctx=window.__axisAudio;if(!ctx)return;const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type="sine";osc.frequency.value=level>=3?660:520;gain.gain.setValueAtTime(.0001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.045,ctx.currentTime+.015);gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.22);osc.connect(gain);gain.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.24)}catch{}}
+function maybeAlertOnWorsening(){const next=pulseSnapshot();if(lastSeveritySnapshot){let worst=0;for(const k of Object.keys(next)){if(next[k]>Number(lastSeveritySnapshot[k]||0))worst=Math.max(worst,next[k])}if(worst>0)playAxisAlert(worst)}lastSeveritySnapshot=next}
+async function liveAxisToken(){const {data}=await client.auth.getSession();return data.session?.access_token||null}
+async function loadDeliveryPulse(){try{const token=await liveAxisToken();if(!token)throw new Error("AXIS session expired.");const r=await fetch(DELIVERY_FEED_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({month:melbourneTodayKey().slice(0,7)})});let j={};try{j=await r.json()}catch{}if(!r.ok||!j.ok)throw new Error(j.error||"Delivery feed unavailable.");deliveryPulse={loaded:true,pending:Number(j.counts?.pending||0),delivered:Number(j.counts?.delivered||0),processed:Number(j.counts?.processed||0),count:Number(j.count||0),scope:j.scope||"all",deals:Array.isArray(j.deals)?j.deals:[],error:null};return deliveryPulse}catch(e){deliveryPulse={...deliveryPulse,loaded:false,error:e?.message||"Unavailable"};console.warn("AXIS delivery pulse:",e);return deliveryPulse}}
+async function loadAppointmentPulse(){appointmentPulse.overdue=Math.max(0,Number(counts.appointments||0));try{const token=await liveAxisToken();if(!token)throw new Error("No session");const r=await fetch(APPOINTMENT_INSIGHTS_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({month:melbourneTodayKey().slice(0,7)})});let j={};try{j=await r.json()}catch{}if(!r.ok||!j.ok)throw new Error(j.error||"Appointment insights unavailable");const users=Array.isArray(j.users)?j.users:[];const role=String(profile?.role||"").toLowerCase();let upcoming=null;if(role==="user"){const email=String(profile?.email||"").trim().toLowerCase();const name=`${profile?.first_name||""} ${profile?.last_name||""}`.trim().toLowerCase();const me=users.find(u=>String(u.email||"").trim().toLowerCase()===email)||users.find(u=>String(u.name||u.salesperson_name||"").trim().toLowerCase()===name);const raw=me?.upcoming??me?.upcoming_saturday??me?.saturday_appointments??me?.next_saturday;if(Number.isFinite(Number(raw)))upcoming=Number(raw)}else{const vals=users.map(u=>u?.upcoming??u?.upcoming_saturday??u?.saturday_appointments??u?.next_saturday).filter(v=>Number.isFinite(Number(v))).map(Number);if(vals.length)upcoming=vals.reduce((a,b)=>a+b,0)}appointmentPulse={overdue:Math.max(0,Number(counts.appointments||0)),upcoming,target:4,loaded:true}}catch(e){appointmentPulse={...appointmentPulse,overdue:Math.max(0,Number(counts.appointments||0)),loaded:true}}return appointmentPulse}
+async function loadRhythmPulse(){try{await loadMonthlyFlow();const m=flowMetrics(flowDeals);const sev=m.level==="good"?0:(m.level==="bad"?(m.dryStreak>=5?4:m.dryStreak>=3?3:2):1);rhythmPulse={loaded:true,level:m.level,severity:sev,title:m.title,metrics:m};return rhythmPulse}catch(e){console.warn("AXIS rhythm pulse:",e);return rhythmPulse}}
+async function refreshOperationalPulse(){await Promise.allSettled([loadDeliveryPulse(),loadAppointmentPulse(),loadRhythmPulse()]);calculateMomentum();renderTiles();maybeAlertOnWorsening()}
+function renderOperationalTile(t){if(t.key==="appointments"){const sev=appointmentSeverity(),over=Number(appointmentPulse.overdue||0),sat=appointmentPulse.upcoming;const satLine=Number.isFinite(sat)?`📅 ${sat}/${appointmentPulse.target} Saturday`:`📅 Saturday target syncing`;return `<div class="tile-top"><div class="icon">${t.icon}</div><div class="badge ${severityClass(sev)}"><span class="tile-severity">${severityEmoji(sev)}</span></div></div><div><h2>${t.name}</h2><p>${t.desc}</p><div class="tile-status-lines"><div class="tile-status-line">${over?`⚑ ${over} need outcome`:`✓ Past appointments updated`}</div><div class="tile-status-line muted">${satLine}</div></div></div><div class="tile-bottom"><span>${String(profile?.role||"").toLowerCase()==="user"?"Your appointment position":"Team appointment position"}</span><strong>OPEN ↗</strong></div>`}if(t.key==="delivery"){const sev=deliverySeverity(),intro=Number(counts.delivery||0),d=deliveryPulse;const live=d.loaded?`${d.pending} pending · ${d.delivered+d.processed} delivered`:`Delivery feed syncing`;return `<div class="tile-top"><div class="icon">${t.icon}</div><div class="badge ${severityClass(sev)}"><span class="tile-severity">${severityEmoji(sev)}</span></div></div><div><h2>${t.name}</h2><p>${t.desc}</p><div class="tile-status-lines"><div class="tile-status-line">${intro?`🤝 ${intro} service intro${intro===1?"":"s"} outstanding`:`✓ Service introductions clear`}</div><div class="tile-status-line muted">🚗 ${live}</div></div></div><div class="tile-bottom"><span>${d.scope==="self"?"Your delivery position":"All delivery position"}</span><strong>OPEN ↗</strong></div>`}return tileHtml(t)}
+
 function weatherEmoji(code,wind){
   const c=Number(code);
   if(Number(wind)>=35)return"🌬️";
@@ -1264,18 +1315,14 @@ async function loadWeather(){
   }
 }
 
-function renderAxisScorePlaceholder(){
-  const points=document.getElementById("axisPoints");
-  const rank=document.getElementById("axisRank");
-  if(points)points.textContent="—";
-  if(rank)rank.textContent="#—";
-}
+function renderAxisScorePlaceholder(){momentumData={score:null,label:"Building",tier:"white"};renderMomentumChip()}
 
 async function openAxis(){
   renderProfile();
   renderAxisScorePlaceholder();
   loadWeather();
   await Promise.all([refreshCounts(),loadAxisLeague()]);
+  await refreshOperationalPulse();
   renderTiles();
   startTimer();
   show(document.getElementById("appView"));
@@ -1386,14 +1433,14 @@ body{display:grid;place-items:center;background:radial-gradient(circle at 50% 42
 function renderTiles(){
   const grid=document.getElementById("tileGrid"),mob=document.getElementById("mobileList");grid.innerHTML="";mob.innerHTML="";
   apps.filter(a=>profile[a.field]).forEach(a=>{
-    const el=document.createElement("a");el.className="tile";el.dataset.app=a.key;el.href=a.url;el.target="_blank";el.rel="noopener";el.innerHTML=tileHtml(a);el.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);grid.appendChild(el);
-    const m=document.createElement("a");m.className="mobile-tile";m.dataset.app=a.key;m.href=a.url;m.target="_blank";m.rel="noopener";m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong><small>${a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date")}</small></div><div class="badge ${counts[a.key]?"warn":"ok"}">${a.external?"↗":counts[a.key]||"✓"}</div>`;m.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);mob.appendChild(m);
+    const el=document.createElement("a");el.className="tile";el.dataset.app=a.key;if(a.key==="appointments")el.classList.add(`sev-${appointmentSeverity()}`);if(a.key==="delivery")el.classList.add(`sev-${deliverySeverity()}`);el.href=a.url;el.target="_blank";el.rel="noopener";el.innerHTML=renderOperationalTile(a);el.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);grid.appendChild(el);
+    const m=document.createElement("a");m.className="mobile-tile";m.dataset.app=a.key;m.href=a.url;m.target="_blank";m.rel="noopener";{const sev=a.key==="appointments"?appointmentSeverity():a.key==="delivery"?deliverySeverity():0;const sub=a.key==="appointments"?`${appointmentPulse.overdue?appointmentPulse.overdue+" need outcome":"Past updated"}${Number.isFinite(appointmentPulse.upcoming)?" · 📅 "+appointmentPulse.upcoming+"/4":""}`:a.key==="delivery"?`${counts.delivery?"🤝 "+counts.delivery+" intros":"Intros clear"}${deliveryPulse.loaded?" · "+deliveryPulse.pending+" pending":""}`:a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date");m.classList.add(`sev-${sev}`);m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong><small>${sub}</small></div><div class="badge ${severityClass(sev)}">${a.external?"↗":severityEmoji(sev)}</div>`;}m.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);mob.appendChild(m);
   });
 
   if(["admin","manager","user"].includes(String(profile.role||"").toLowerCase())){
     const selfOnly=String(profile.role||"").toLowerCase()==="user";
-    const f=document.createElement("button");f.className="tile"+(profile.role==="admin"?" admin":"");f.dataset.app="flow";f.innerHTML=`<div class="tile-top"><div class="icon">〽</div><div class="badge warn">LIVE</div></div><div><h2>Sales Rhythm</h2><p>${selfOnly?"Your daily sales rhythm":"Daily sales rhythm · team view"}</p></div><div class="tile-bottom"><span>${selfOnly?"Your data only":"Team + individual views"}</span><strong>READ THE MONTH</strong></div>`;f.onclick=openMonthlyFlow;grid.appendChild(f);
-    const fm=document.createElement("button");fm.className="mobile-tile";fm.dataset.app="flow";fm.innerHTML=`<div class="icon">〽</div><div><strong>Sales Rhythm</strong><small>${selfOnly?"Your performance only":"Team + individual views"}</small></div><div class="badge warn">›</div>`;fm.onclick=openMonthlyFlow;mob.appendChild(fm);
+    const f=document.createElement("button");const flowSev=rhythmSeverity();f.className="tile"+(profile.role==="admin"?" admin":"")+` sev-${flowSev}`;f.dataset.app="flow";const rm=rhythmPulse.metrics;f.innerHTML=`<div class="tile-top"><div class="icon">〽</div><div class="badge ${severityClass(flowSev)}"><span class="tile-severity">${severityEmoji(flowSev)}</span></div></div><div><h2>Sales Rhythm</h2><p>${selfOnly?"Your daily sales rhythm":"Daily sales rhythm · team view"}</p><div class="tile-status-lines"><div class="tile-status-line">${rhythmPulse.loaded?`${severityEmoji(flowSev)} ${rhythmPulse.title}`:"Reading the month…"}</div><div class="tile-status-line muted">${rm?`${rm.signedTotal} signed · ${rm.productive}/${rm.elapsed.length||0} productive days`:selfOnly?"Your data only":"Team + individual views"}</div></div></div><div class="tile-bottom"><span>${selfOnly?"Your data only":"Team + individual views"}</span><strong>READ THE MONTH</strong></div>`;f.onclick=openMonthlyFlow;grid.appendChild(f);
+    const fm=document.createElement("button");fm.className=`mobile-tile sev-${flowSev}`;fm.dataset.app="flow";fm.innerHTML=`<div class="icon">〽</div><div><strong>Sales Rhythm</strong><small>${rhythmPulse.loaded?rhythmPulse.title:(selfOnly?"Your performance only":"Team + individual views")}</small></div><div class="badge ${severityClass(flowSev)}">${severityEmoji(flowSev)}</div>`;fm.onclick=openMonthlyFlow;mob.appendChild(fm);
   }
 
   const league=document.createElement("button");league.className="tile league-tile";league.dataset.app="league";league.innerHTML=renderLeagueTileHtml();league.onclick=openLeague;grid.appendChild(league);
@@ -1409,18 +1456,19 @@ function renderTiles(){
     const i=document.createElement("button");i.className="tile admin";i.dataset.app="insights";i.innerHTML=`<div class="tile-top"><div class="icon">◫</div><div class="badge ok">LIVE</div></div><div><h2>AXIS Insights</h2><p>Logins, usage & adoption</p><div class="insight-mini"><div class="insight-mini-row"><span>Appointments</span><div class="insight-mini-bar"><i style="width:78%"></i></div><b>↗</b></div><div class="insight-mini-row"><span>Delivery</span><div class="insight-mini-bar"><i style="width:52%"></i></div><b>↗</b></div></div></div><div class="tile-bottom"><span>Admin reporting</span><strong>VIEW</strong></div>`;i.onclick=openInsights;grid.appendChild(i);
     const im=document.createElement("button");im.className="mobile-tile";im.innerHTML=`<div class="icon">◫</div><div><strong>AXIS Insights</strong><small>Usage & adoption</small></div><div class="badge ok">›</div>`;im.onclick=openInsights;mob.appendChild(im);
   }
+  calculateMomentum();
   updateSummary();
 }
 
 async function refreshCounts(){
-  try{const {data,error}=await client.rpc("axis_notification_counts");if(error)throw error;counts={};(data||[]).forEach(r=>counts[r.app_key]=Number(r.notification_count||0));renderTiles()}catch(e){console.warn(e)}
+  try{const {data,error}=await client.rpc("axis_notification_counts");if(error)throw error;counts={};(data||[]).forEach(r=>counts[r.app_key]=Number(r.notification_count||0));appointmentPulse.overdue=Number(counts.appointments||0);return counts}catch(e){console.warn(e);return counts}
 }
 function startTimer(){
   if(timer)clearInterval(timer);
-  timer=setInterval(refreshCounts,60000);
+  timer=setInterval(async()=>{await refreshCounts();await refreshOperationalPulse()},60000);
   setInterval(loadWeather,45*60*1000);
 }
-function updateSummary(){const total=Object.values(counts).reduce((a,b)=>a+Number(b||0),0);openActions.textContent=total;summary.textContent=total?`${total} item${total===1?"":"s"} require your attention.`:"Your systems are up to date."}
+function updateSummary(){const total=Math.max(0,Number(counts.appointments||0))+Math.max(0,Number(counts.delivery||0));openActions.textContent=total;const worst=Math.max(appointmentSeverity(),deliverySeverity(),rhythmSeverity());summary.textContent=worst>=4?`☠️ Critical actions need attention.`:worst===3?`🌊 Pressure is building across AXIS.`:worst===2?`🔥 There are items that need attention now.`:worst===1?`🌶️ A few things are starting to slip.`:"Your systems are up to date."}
 async function recordLaunch(key){
   try{
     const {error}=await client.from("app_launches").insert({user_id:profile.id,app_key:key});
@@ -1705,6 +1753,9 @@ flowPerson.onchange=renderMonthlyFlow;
 flowDailyBtn.onclick=()=>{flowView="daily";renderMonthlyFlow()};
 flowCumulativeBtn.onclick=()=>{flowView="cumulative";renderMonthlyFlow()};
 
+document.addEventListener("pointerdown",unlockAxisAudio,{once:true,capture:true});
+document.addEventListener("keydown",unlockAxisAudio,{once:true,capture:true});
+const momentumChip=document.getElementById("momentumChip");if(momentumChip)momentumChip.onclick=()=>{const d=momentumData;alert(`AXIS Momentum: ${d.score??"—"}/100 · ${d.label}\n\nBuilt from appointment housekeeping${Number.isFinite(appointmentPulse.upcoming)?", Saturday readiness":""}, delivery introductions and Sales Rhythm. Only live available signals are scored.`)};
 bootstrap();
 </script>
 </body>
