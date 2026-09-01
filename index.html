@@ -637,7 +637,7 @@ button{cursor:pointer}
   </div>
   <div id="flowHand" class="flow-hand" data-level="watch"></div>
   <div id="flowChartWrap" class="flow-chart-wrap"></div>
-  <div class="flow-foot">Working-day chart slots exclude Sundays and Victorian public holidays. Legitimate sign-ups on non-working days still count in the Signed total.</div>
+  <div class="flow-foot">Working-day chart slots exclude Sundays and Victorian public holidays. Legitimate sign-ups on non-working days still count in the Signed total. To Be Delivered is live Oracle/DMS pending status 2.</div>
 </section>
 
 <section id="insightsModal" class="modal hidden">
@@ -678,7 +678,7 @@ let recoveryMode=false;
 let leagueRows=[],myLeague=null,scoreData={month:0,lifetime:0,rank:null,launches:0};
 let flowDeals=[],flowPeople=[],flowMonth="",flowView="daily";
 let deliveryPulse={loaded:false,pending:0,delivered:0,processed:0,count:0,scope:"all",deals:[],error:null};
-let appointmentPulse={overdue:0,upcoming:null,target:4,loaded:false};
+let appointmentPulse={overdue:0,upcoming:null,target:4,monthly:0,loaded:false};
 let rhythmPulse={loaded:false,level:"watch",severity:1,title:"READING RHYTHM",metrics:null};
 let momentumData={score:null,label:"Building",tier:"white"};
 let audioUnlocked=false,lastSeveritySnapshot=null;
@@ -1219,11 +1219,16 @@ function renderMonthlyFlow(){
   }
 
   flowPeriod.textContent=`${monthLabelNow()} · ${selected}`;
+  const pendingStatus2=pendingDeliveriesForFlow();
+  const toBeDelivered=Number.isFinite(pendingStatus2)?pendingStatus2:m.toBeDelivered;
+
   flowSummary.innerHTML=
     `<div class="stat"><strong>${m.signedTotal}</strong><span>Signed</span></div>`+
     `<div class="stat"><strong>${m.deliveredTotal}</strong><span>Delivered</span></div>`+
-    `<div class="stat"><strong>${m.toBeDelivered}</strong><span>To Be Delivered</span></div>`+
+    `<div class="stat"><strong>${toBeDelivered}</strong><span>To Be Delivered</span></div>`+
     `<div class="stat"><strong>${m.productive}</strong><span>Productive Days</span></div>`;
+
+  m.toBeDelivered=toBeDelivered;
 
   flowHand.dataset.level=m.level;
   flowHand.innerHTML=`<strong>${m.title}</strong><p>${m.copy}</p>`;
@@ -1284,10 +1289,127 @@ function playAxisAlert(level){if(!audioUnlocked||document.visibilityState!=="vis
 function maybeAlertOnWorsening(){const next=pulseSnapshot();if(lastSeveritySnapshot){let worst=0;for(const k of Object.keys(next)){if(next[k]>Number(lastSeveritySnapshot[k]||0))worst=Math.max(worst,next[k])}if(worst>0)playAxisAlert(worst)}lastSeveritySnapshot=next}
 async function liveAxisToken(){const {data}=await client.auth.getSession();return data.session?.access_token||null}
 async function loadDeliveryPulse(){try{const token=await liveAxisToken();if(!token)throw new Error("AXIS session expired.");const r=await fetch(DELIVERY_FEED_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({month:melbourneTodayKey().slice(0,7)})});let j={};try{j=await r.json()}catch{}if(!r.ok||!j.ok)throw new Error(j.error||"Delivery feed unavailable.");deliveryPulse={loaded:true,pending:Number(j.counts?.pending||0),delivered:Number(j.counts?.delivered||0),processed:Number(j.counts?.processed||0),count:Number(j.count||0),scope:j.scope||"all",deals:Array.isArray(j.deals)?j.deals:[],error:null};return deliveryPulse}catch(e){deliveryPulse={...deliveryPulse,loaded:false,error:e?.message||"Unavailable"};console.warn("AXIS delivery pulse:",e);return deliveryPulse}}
-async function loadAppointmentPulse(){appointmentPulse.overdue=Math.max(0,Number(counts.appointments||0));try{const token=await liveAxisToken();if(!token)throw new Error("No session");const r=await fetch(APPOINTMENT_INSIGHTS_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({month:melbourneTodayKey().slice(0,7)})});let j={};try{j=await r.json()}catch{}if(!r.ok||!j.ok)throw new Error(j.error||"Appointment insights unavailable");const users=Array.isArray(j.users)?j.users:[];const role=String(profile?.role||"").toLowerCase();let upcoming=null;if(role==="user"){const email=String(profile?.email||"").trim().toLowerCase();const name=`${profile?.first_name||""} ${profile?.last_name||""}`.trim().toLowerCase();const me=users.find(u=>String(u.email||"").trim().toLowerCase()===email)||users.find(u=>String(u.name||u.salesperson_name||"").trim().toLowerCase()===name);const raw=me?.upcoming??me?.upcoming_saturday??me?.saturday_appointments??me?.next_saturday;if(Number.isFinite(Number(raw)))upcoming=Number(raw)}else{const vals=users.map(u=>u?.upcoming??u?.upcoming_saturday??u?.saturday_appointments??u?.next_saturday).filter(v=>Number.isFinite(Number(v))).map(Number);if(vals.length)upcoming=vals.reduce((a,b)=>a+b,0)}appointmentPulse={overdue:Math.max(0,Number(counts.appointments||0)),upcoming,target:4,loaded:true}}catch(e){appointmentPulse={...appointmentPulse,overdue:Math.max(0,Number(counts.appointments||0)),loaded:true}}return appointmentPulse}
+async function loadAppointmentPulse(){
+  appointmentPulse.overdue=Math.max(0,Number(counts.appointments||0));
+
+  try{
+    const token=await liveAxisToken();
+    if(!token)throw new Error("No session");
+
+    const r=await fetch(APPOINTMENT_INSIGHTS_ENDPOINT,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "Authorization":"Bearer "+token
+      },
+      body:JSON.stringify({month:melbourneTodayKey().slice(0,7)})
+    });
+
+    let j={};
+    try{j=await r.json()}catch{}
+    if(!r.ok||!j.ok)throw new Error(j.error||"Appointment insights unavailable");
+
+    const users=Array.isArray(j.users)?j.users:[];
+    const role=String(profile?.role||"").toLowerCase();
+
+    let upcoming=null;
+    let monthly=0;
+
+    if(role==="user"){
+      const email=String(profile?.email||"").trim().toLowerCase();
+      const name=`${profile?.first_name||""} ${profile?.last_name||""}`.trim().toLowerCase();
+
+      const me=
+        users.find(u=>String(u.email||"").trim().toLowerCase()===email)||
+        users.find(u=>String(u.name||u.salesperson_name||"").trim().toLowerCase()===name);
+
+      monthly=Number(me?.appointments||0);
+
+      const raw=
+        me?.upcoming ??
+        me?.upcoming_saturday ??
+        me?.saturday_appointments ??
+        me?.next_saturday;
+
+      if(Number.isFinite(Number(raw)))upcoming=Number(raw);
+    }else{
+      monthly=users.reduce((sum,u)=>sum+Number(u?.appointments||0),0);
+
+      const vals=users
+        .map(u=>
+          u?.upcoming ??
+          u?.upcoming_saturday ??
+          u?.saturday_appointments ??
+          u?.next_saturday
+        )
+        .filter(v=>Number.isFinite(Number(v)))
+        .map(Number);
+
+      if(vals.length)upcoming=vals.reduce((a,b)=>a+b,0);
+    }
+
+    appointmentPulse={
+      overdue:Math.max(0,Number(counts.appointments||0)),
+      upcoming,
+      target:4,
+      monthly,
+      loaded:true
+    };
+  }catch(e){
+    const role=String(profile?.role||"").toLowerCase();
+    let monthly=0;
+
+    if(role==="user"){
+      monthly=Number(myLeague?.appointmentMetrics?.appointments||0);
+    }else{
+      monthly=leagueRows.reduce(
+        (sum,u)=>sum+Number(u?.appointmentMetrics?.appointments||0),
+        0
+      );
+    }
+
+    appointmentPulse={
+      ...appointmentPulse,
+      overdue:Math.max(0,Number(counts.appointments||0)),
+      monthly,
+      loaded:true
+    };
+  }
+
+  return appointmentPulse;
+}
+
+function normalisePersonKey(v){
+  return String(v||"").trim().toLowerCase().replace(/\s+/g," ");
+}
+
+function pendingDeliveriesForFlow(){
+  if(!deliveryPulse.loaded)return null;
+
+  const role=String(profile?.role||"").toLowerCase();
+  const pendingDeals=(deliveryPulse.deals||[]).filter(d=>Number(d?.status)===2);
+
+  if(role==="user")return pendingDeals.length;
+
+  const selected=flowPerson?.value||"all";
+  if(selected==="all")return pendingDeals.length;
+
+  const person=flowPeople.find(p=>p.key===selected);
+  if(!person)return 0;
+
+  const wantedEmail=normalisePersonKey(person.email);
+  const wantedName=normalisePersonKey(person.name);
+
+  return pendingDeals.filter(d=>{
+    const email=normalisePersonKey(d?.salesperson_email);
+    const name=normalisePersonKey(d?.salesperson_name);
+    return (wantedEmail&&email===wantedEmail)||(wantedName&&name===wantedName);
+  }).length;
+}
+
 async function loadRhythmPulse(){try{await loadMonthlyFlow();const m=flowMetrics(flowDeals);const sev=m.level==="good"?0:(m.level==="bad"?(m.dryStreak>=5?4:m.dryStreak>=3?3:2):1);rhythmPulse={loaded:true,level:m.level,severity:sev,title:m.title,metrics:m};return rhythmPulse}catch(e){console.warn("AXIS rhythm pulse:",e);return rhythmPulse}}
 async function refreshOperationalPulse(){await Promise.allSettled([loadDeliveryPulse(),loadAppointmentPulse(),loadRhythmPulse()]);calculateMomentum();renderTiles();maybeAlertOnWorsening()}
-function renderOperationalTile(t){if(t.key==="appointments"){const sev=appointmentSeverity(),over=Number(appointmentPulse.overdue||0),sat=appointmentPulse.upcoming;const satLine=Number.isFinite(sat)?`📅 ${sat}/${appointmentPulse.target} Saturday`:`📅 Saturday target syncing`;return `<div class="tile-top"><div class="icon">${t.icon}</div><div class="badge ${severityClass(sev)}"><span class="tile-severity">${severityEmoji(sev)}</span></div></div><div><h2>${t.name}</h2><p>${t.desc}</p><div class="tile-status-lines"><div class="tile-status-line">${over?`⚑ ${over} need outcome`:`✓ Past appointments updated`}</div><div class="tile-status-line muted">${satLine}</div></div></div><div class="tile-bottom"><span>${String(profile?.role||"").toLowerCase()==="user"?"Your appointment position":"Team appointment position"}</span><strong>OPEN ↗</strong></div>`}if(t.key==="delivery"){const sev=deliverySeverity(),intro=Number(counts.delivery||0),d=deliveryPulse;const live=d.loaded?`${d.pending} pending · ${d.delivered+d.processed} delivered`:`Delivery feed syncing`;return `<div class="tile-top"><div class="icon">${t.icon}</div><div class="badge ${severityClass(sev)}"><span class="tile-severity">${severityEmoji(sev)}</span></div></div><div><h2>${t.name}</h2><p>${t.desc}</p><div class="tile-status-lines"><div class="tile-status-line">${intro?`🤝 ${intro} service intro${intro===1?"":"s"} outstanding`:`✓ Service introductions clear`}</div><div class="tile-status-line muted">🚗 ${live}</div></div></div><div class="tile-bottom"><span>${d.scope==="self"?"Your delivery position":"All delivery position"}</span><strong>OPEN ↗</strong></div>`}return tileHtml(t)}
+function renderOperationalTile(t){if(t.key==="appointments"){const sev=appointmentSeverity(),over=Number(appointmentPulse.overdue||0),sat=appointmentPulse.upcoming,monthly=Number(appointmentPulse.monthly||0);const satLine=Number.isFinite(sat)?`📅 ${sat}/${appointmentPulse.target} Saturday`:`📅 Saturday target syncing`;return `<div class="tile-top"><div class="icon">${t.icon}</div><div class="badge ${severityClass(sev)}">${monthly}</div></div><div><h2>${t.name}</h2><p>${t.desc}</p><div class="tile-status-lines"><div class="tile-status-line">📅 ${monthly} appointment${monthly===1?"":"s"} MTD</div><div class="tile-status-line">${over?`⚑ ${over} need outcome`:`✓ Past appointments updated`}</div><div class="tile-status-line muted">${satLine}</div></div></div><div class="tile-bottom"><span>${String(profile?.role||"").toLowerCase()==="user"?"Your appointment position":"Team appointment position"}</span><strong>OPEN ↗</strong></div>`}if(t.key==="delivery"){const sev=deliverySeverity(),intro=Number(counts.delivery||0),d=deliveryPulse;const live=d.loaded?`${d.pending} pending · ${d.delivered+d.processed} delivered`:`Delivery feed syncing`;return `<div class="tile-top"><div class="icon">${t.icon}</div><div class="badge ${severityClass(sev)}"><span class="tile-severity">${severityEmoji(sev)}</span></div></div><div><h2>${t.name}</h2><p>${t.desc}</p><div class="tile-status-lines"><div class="tile-status-line">${intro?`🤝 ${intro} service intro${intro===1?"":"s"} outstanding`:`✓ Service introductions clear`}</div><div class="tile-status-line muted">🚗 ${live}</div></div></div><div class="tile-bottom"><span>${d.scope==="self"?"Your delivery position":"All delivery position"}</span><strong>OPEN ↗</strong></div>`}return tileHtml(t)}
 
 function weatherEmoji(code,wind){
   const c=Number(code);
@@ -1442,8 +1564,8 @@ function renderTiles(){
       const sev=a.key==="appointments"?appointmentSeverity():a.key==="delivery"?deliverySeverity():0;
       let mobileBody="";
       if(a.key==="appointments"){
-        const over=Number(appointmentPulse.overdue||0),sat=appointmentPulse.upcoming;
-        mobileBody=`<div class="mobile-status"><span>${over?`⚑ ${over} need outcome`:`✓ Past appointments updated`}</span><span class="muted">${Number.isFinite(sat)?`📅 ${sat}/${appointmentPulse.target} Saturday`:`📅 Saturday target syncing`}</span></div>`;
+        const over=Number(appointmentPulse.overdue||0),sat=appointmentPulse.upcoming,monthly=Number(appointmentPulse.monthly||0);
+        mobileBody=`<div class="mobile-status"><span>📅 ${monthly} appointment${monthly===1?"":"s"} MTD</span><span>${over?`⚑ ${over} need outcome`:`✓ Past appointments updated`}</span><span class="muted">${Number.isFinite(sat)?`📅 ${sat}/${appointmentPulse.target} Saturday`:`📅 Saturday target syncing`}</span></div>`;
       }else if(a.key==="delivery"){
         const intro=Number(counts.delivery||0);
         mobileBody=`<div class="mobile-status"><span>${intro?`🤝 ${intro} service intro${intro===1?"":"s"} outstanding`:`✓ Service introductions clear`}</span><span class="muted">${deliveryPulse.loaded?`🚗 ${deliveryPulse.pending} pending · ${deliveryPulse.delivered+deliveryPulse.processed} delivered`:`🚗 Delivery feed syncing`}</span></div>`;
@@ -1451,14 +1573,15 @@ function renderTiles(){
         mobileBody=`<small>${a.external?"External login":(counts[a.key]?counts[a.key]+" requiring attention":"Up to date")}</small>`;
       }
       m.classList.add(`sev-${sev}`);
-      m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong>${mobileBody}</div><div class="badge ${severityClass(sev)}">${a.external?"↗":severityEmoji(sev)}</div>`;
+      const mobileBadge=a.key==="appointments"?Number(appointmentPulse.monthly||0):(a.external?"↗":severityEmoji(sev));
+      m.innerHTML=`<div class="icon">${a.icon}</div><div><strong>${a.name}</strong>${mobileBody}</div><div class="badge ${severityClass(sev)}">${mobileBadge}</div>`;
     }m.onclick=(event)=>["appointments","delivery","pd_calendar"].includes(a.key)?launchAxisApp(a,event):recordLaunch(a.key);mob.appendChild(m);
   });
 
   if(["admin","manager","user"].includes(String(profile.role||"").toLowerCase())){
     const selfOnly=String(profile.role||"").toLowerCase()==="user";
-    const f=document.createElement("button");const flowSev=rhythmSeverity();f.className="tile"+(profile.role==="admin"?" admin":"")+` sev-${flowSev}`;f.dataset.app="flow";const rm=rhythmPulse.metrics;f.innerHTML=`<div class="tile-top"><div class="icon">〽</div><div class="badge ${severityClass(flowSev)}"><span class="tile-severity">${severityEmoji(flowSev)}</span></div></div><div><h2>Sales Rhythm</h2><p>${selfOnly?"Your daily sales rhythm":"Daily sales rhythm · team view"}</p><div class="tile-status-lines"><div class="tile-status-line">${rhythmPulse.loaded?`${severityEmoji(flowSev)} ${rhythmPulse.title}`:"Reading the month…"}</div><div class="tile-status-line muted">${rm?`${rm.signedTotal} signed · ${rm.toBeDelivered} to be delivered · ${rm.productive}/${rm.elapsed.length||0} productive days`:selfOnly?"Your data only":"Team + individual views"}</div></div></div><div class="tile-bottom"><span>${selfOnly?"Your data only":"Team + individual views"}</span><strong>READ THE MONTH</strong></div>`;f.onclick=openMonthlyFlow;grid.appendChild(f);
-    const fm=document.createElement("button");fm.className=`mobile-tile sev-${flowSev}`;fm.dataset.app="flow";fm.innerHTML=`<div class="icon">〽</div><div><strong>Sales Rhythm</strong>${rhythmPulse.loaded&&rm?`<div class="mobile-status"><span>${severityEmoji(flowSev)} ${rhythmPulse.title}</span><span class="muted">${rm.signedTotal} signed · ${rm.toBeDelivered} to be delivered</span><span class="muted">${rm.productive}/${rm.elapsed.length||0} productive days</span></div>`:`<small>${selfOnly?"Your performance only":"Team + individual views"}</small>`}</div><div class="badge ${severityClass(flowSev)}">${severityEmoji(flowSev)}</div>`;fm.onclick=openMonthlyFlow;mob.appendChild(fm);
+    const f=document.createElement("button");const flowSev=rhythmSeverity();f.className="tile"+(profile.role==="admin"?" admin":"")+` sev-${flowSev}`;f.dataset.app="flow";const rm=rhythmPulse.metrics;const livePending=pendingDeliveriesForFlow();const tileTbd=Number.isFinite(livePending)?livePending:Number(rm?.toBeDelivered||0);f.innerHTML=`<div class="tile-top"><div class="icon">〽</div><div class="badge ${severityClass(flowSev)}"><span class="tile-severity">${severityEmoji(flowSev)}</span></div></div><div><h2>Sales Rhythm</h2><p>${selfOnly?"Your daily sales rhythm":"Daily sales rhythm · team view"}</p><div class="tile-status-lines"><div class="tile-status-line">${rhythmPulse.loaded?`${severityEmoji(flowSev)} ${rhythmPulse.title}`:"Reading the month…"}</div><div class="tile-status-line muted">${rm?`${rm.signedTotal} signed · ${tileTbd} to be delivered · ${rm.productive}/${rm.elapsed.length||0} productive days`:selfOnly?"Your data only":"Team + individual views"}</div></div></div><div class="tile-bottom"><span>${selfOnly?"Your data only":"Team + individual views"}</span><strong>READ THE MONTH</strong></div>`;f.onclick=openMonthlyFlow;grid.appendChild(f);
+    const fm=document.createElement("button");fm.className=`mobile-tile sev-${flowSev}`;fm.dataset.app="flow";fm.innerHTML=`<div class="icon">〽</div><div><strong>Sales Rhythm</strong>${rhythmPulse.loaded&&rm?`<div class="mobile-status"><span>${severityEmoji(flowSev)} ${rhythmPulse.title}</span><span class="muted">${rm.signedTotal} signed · ${tileTbd} to be delivered</span><span class="muted">${rm.productive}/${rm.elapsed.length||0} productive days</span></div>`:`<small>${selfOnly?"Your performance only":"Team + individual views"}</small>`}</div><div class="badge ${severityClass(flowSev)}">${severityEmoji(flowSev)}</div>`;fm.onclick=openMonthlyFlow;mob.appendChild(fm);
   }
 
   const league=document.createElement("button");league.className="tile league-tile";league.dataset.app="league";league.innerHTML=renderLeagueTileHtml();league.onclick=openLeague;grid.appendChild(league);
