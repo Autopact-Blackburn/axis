@@ -394,6 +394,14 @@ button{cursor:pointer}
 .flow-bar{fill:rgba(141,107,255,.72)}
 .flow-line{fill:none;stroke:#b59eff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .flow-dot{fill:#f7f4fa;stroke:#8d6bff;stroke-width:2}
+.flow-delivery-bar{fill:rgba(62,218,210,.72)}
+.flow-delivery-line{fill:none;stroke:#4febe1;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.flow-delivery-dot{fill:#f7f4fa;stroke:#4febe1;stroke-width:2}
+.flow-value{font-size:10px;fill:#f7f4fa;font-weight:900}
+.flow-value.pending{fill:#9ff7ef}
+.flow-legend-text{font-size:10px;fill:#cfc7d6;font-weight:800}
+.flow-legend-total{font-size:10px;fill:#9d95a5}
+
 .flow-empty{padding:50px 20px;text-align:center;color:var(--muted);font-size:12px}
 .flow-foot{margin-top:12px;color:var(--muted);font-size:9px;line-height:1.5}
 @media(max-width:700px){
@@ -401,7 +409,7 @@ button{cursor:pointer}
   .flow-select{width:100%;min-width:0}
   .flow-toggle{width:100%}
   .flow-toggle button{flex:1}
-  .flow-chart{height:300px}
+  .flow-chart{height:360px}
 }
 
 .mobile-list{display:none}
@@ -1161,16 +1169,25 @@ function renderFlowChart(metrics){
     return;
   }
 
-  const daily=days.map(d=>signupCounts.get(d.key)||0);
-  const values=flowView==="daily"
-    ?daily
-    :daily.reduce((arr,n,i)=>{arr.push(n+(arr[i-1]||0));return arr},[]);
-  const max=Math.max(1,...values);
-  const width=Math.max(760,days.length*46);
-  const height=430,padL=46,padR=24,padT=38,padB=78;
+  const pendingChart=pendingDeliveryChartData(days);
+  const dailySigned=days.map(d=>signupCounts.get(d.key)||0);
+  const dailyPending=days.map(d=>pendingChart.map.get(d.key)||0);
+
+  const signedValues=flowView==="daily"
+    ?dailySigned
+    :dailySigned.reduce((arr,n,i)=>{arr.push(n+(arr[i-1]||0));return arr},[]);
+
+  const pendingValues=flowView==="daily"
+    ?dailyPending
+    :dailyPending.reduce((arr,n,i)=>{arr.push(n+(arr[i-1]||0));return arr},[]);
+
+  const max=Math.max(1,...signedValues,...pendingValues);
+  const width=Math.max(900,days.length*50);
+  const height=390,padL=46,padR=22,padT=54,padB=66;
   const plotW=width-padL-padR,plotH=height-padT-padB;
   const x=i=>padL+(days.length===1?plotW/2:i*(plotW/(days.length-1)));
   const y=v=>padT+plotH-(v/max)*plotH;
+
   let grid="";
   for(let i=0;i<=4;i++){
     const val=Math.round(max*(4-i)/4);
@@ -1184,21 +1201,46 @@ function renderFlowChart(metrics){
 
   let marks="";
   if(flowView==="daily"){
-    const slot=Math.max(10,plotW/days.length);
-    const barW=Math.min(24,slot*.58);
-    marks=values.map((v,i)=>{
+    const slot=Math.max(14,plotW/days.length);
+    const barW=Math.min(17,slot*.32);
+
+    const signedBars=signedValues.map((v,i)=>{
       const top=y(v),h=padT+plotH-top;
-      return `<rect class="flow-bar" x="${x(i)-barW/2}" y="${top}" width="${barW}" height="${Math.max(v?3:0,h)}" rx="5"></rect>${v?`<text class="flow-value" x="${x(i)}" y="${Math.max(14,top-8)}" text-anchor="middle">${v}</text>`:""}`;
+      return `<rect class="flow-bar" x="${x(i)-barW-2}" y="${top}" width="${barW}" height="${Math.max(v?3:0,h)}" rx="5"></rect>`+
+        (v?`<text class="flow-value" x="${x(i)-barW/2-2}" y="${Math.max(16,top-8)}" text-anchor="middle">${v}</text>`:"");
     }).join("");
+
+    const pendingBars=pendingValues.map((v,i)=>{
+      const top=y(v),h=padT+plotH-top;
+      return `<rect class="flow-delivery-bar" x="${x(i)+2}" y="${top}" width="${barW}" height="${Math.max(v?3:0,h)}" rx="5"></rect>`+
+        (v?`<text class="flow-value pending" x="${x(i)+barW/2+2}" y="${Math.max(16,top-8)}" text-anchor="middle">${v}</text>`:"");
+    }).join("");
+
+    marks=signedBars+pendingBars;
   }else{
-    const pts=values.map((v,i)=>`${x(i)},${y(v)}`).join(" ");
-    marks=`<polyline class="flow-line" points="${pts}"></polyline>`+
-      values.map((v,i)=>`<circle class="flow-dot" cx="${x(i)}" cy="${y(v)}" r="4"></circle><text class="flow-value" x="${x(i)}" y="${Math.max(14,y(v)-10)}" text-anchor="middle">${v}</text>`).join("");
+    const signedPts=signedValues.map((v,i)=>`${x(i)},${y(v)}`).join(" ");
+    const pendingPts=pendingValues.map((v,i)=>`${x(i)},${y(v)}`).join(" ");
+
+    marks=
+      `<polyline class="flow-line" points="${signedPts}"></polyline>`+
+      signedValues.map((v,i)=>`<circle class="flow-dot" cx="${x(i)}" cy="${y(v)}" r="4"></circle>${v?`<text class="flow-value" x="${x(i)}" y="${Math.max(16,y(v)-10)}" text-anchor="middle">${v}</text>`:""}`).join("")+
+      `<polyline class="flow-delivery-line" points="${pendingPts}"></polyline>`+
+      pendingValues.map((v,i)=>`<circle class="flow-delivery-dot" cx="${x(i)}" cy="${y(v)}" r="4"></circle>${v?`<text class="flow-value pending" x="${x(i)}" y="${Math.max(16,y(v)-10)}" text-anchor="middle">${v}</text>`:""}`).join("");
   }
 
-  const labels=days.map((d,i)=>`<text class="flow-axis" transform="translate(${x(i)-2},${height-28}) rotate(-50)" text-anchor="end">${d.day}-${String(flowMonth).slice(5)}</text>`).join("");
+  const labels=days.map((d,i)=>`<text class="flow-axis" transform="translate(${x(i)-2},${height-20}) rotate(-50)" text-anchor="end">${d.day}-${String(flowMonth).slice(5)}</text>`).join("");
 
-  flowChartWrap.innerHTML=`<svg class="flow-chart" viewBox="0 0 ${width} ${height}" style="width:${width}px" role="img" aria-label="Sales Rhythm ${flowView} chart">${grid}${todayLine}${marks}${labels}</svg>`;
+  const legend=`
+    <g class="flow-legend">
+      <rect class="flow-bar" x="${padL}" y="18" width="14" height="10" rx="3"></rect>
+      <text class="flow-legend-text" x="${padL+22}" y="27">Signed</text>
+      <rect class="flow-delivery-bar" x="${padL+88}" y="18" width="14" height="10" rx="3"></rect>
+      <text class="flow-legend-text" x="${padL+110}" y="27">To Be Delivered</text>
+      <text class="flow-legend-total" x="${width-padR}" y="27" text-anchor="end">${pendingChart.total} pending status 2${pendingChart.undatedOrOutside?` · ${pendingChart.undatedOrOutside} not plotted in this month`:""}</text>
+    </g>`;
+
+  flowChartWrap.innerHTML=`<svg class="flow-chart" viewBox="0 0 ${width} ${height}" style="width:${width}px;height:${height}px" role="img" aria-label="Sales Rhythm ${flowView} chart">${legend}${grid}${todayLine}${marks}${labels}</svg>`;
+
   if(todayIndex>=0){
     const target=Math.max(0,x(todayIndex)-flowChartWrap.clientWidth*.55);
     flowChartWrap.scrollLeft=target;
@@ -1292,6 +1334,21 @@ async function loadDeliveryPulse(){try{const token=await liveAxisToken();if(!tok
 async function loadAppointmentPulse(){
   appointmentPulse.overdue=Math.max(0,Number(counts.appointments||0));
 
+  const role=String(profile?.role||"").toLowerCase();
+
+  // The League response already contains the live Appointment Tracker metrics.
+  // Use that as the source of truth for the visible MTD count.
+  if(role==="user"){
+    appointmentPulse.monthly=Number(myLeague?.appointmentMetrics?.appointments||0);
+  }else{
+    appointmentPulse.monthly=leagueRows.reduce(
+      (sum,u)=>sum+Number(u?.appointmentMetrics?.appointments||0),
+      0
+    );
+  }
+
+  // Keep trying the appointment-insights endpoint only for the upcoming Saturday
+  // field. If it isn't exposed yet, leave that line in "syncing" state.
   try{
     const token=await liveAxisToken();
     if(!token)throw new Error("No session");
@@ -1310,10 +1367,7 @@ async function loadAppointmentPulse(){
     if(!r.ok||!j.ok)throw new Error(j.error||"Appointment insights unavailable");
 
     const users=Array.isArray(j.users)?j.users:[];
-    const role=String(profile?.role||"").toLowerCase();
-
     let upcoming=null;
-    let monthly=0;
 
     if(role==="user"){
       const email=String(profile?.email||"").trim().toLowerCase();
@@ -1323,8 +1377,6 @@ async function loadAppointmentPulse(){
         users.find(u=>String(u.email||"").trim().toLowerCase()===email)||
         users.find(u=>String(u.name||u.salesperson_name||"").trim().toLowerCase()===name);
 
-      monthly=Number(me?.appointments||0);
-
       const raw=
         me?.upcoming ??
         me?.upcoming_saturday ??
@@ -1333,8 +1385,6 @@ async function loadAppointmentPulse(){
 
       if(Number.isFinite(Number(raw)))upcoming=Number(raw);
     }else{
-      monthly=users.reduce((sum,u)=>sum+Number(u?.appointments||0),0);
-
       const vals=users
         .map(u=>
           u?.upcoming ??
@@ -1348,34 +1398,12 @@ async function loadAppointmentPulse(){
       if(vals.length)upcoming=vals.reduce((a,b)=>a+b,0);
     }
 
-    appointmentPulse={
-      overdue:Math.max(0,Number(counts.appointments||0)),
-      upcoming,
-      target:4,
-      monthly,
-      loaded:true
-    };
+    appointmentPulse.upcoming=upcoming;
   }catch(e){
-    const role=String(profile?.role||"").toLowerCase();
-    let monthly=0;
-
-    if(role==="user"){
-      monthly=Number(myLeague?.appointmentMetrics?.appointments||0);
-    }else{
-      monthly=leagueRows.reduce(
-        (sum,u)=>sum+Number(u?.appointmentMetrics?.appointments||0),
-        0
-      );
-    }
-
-    appointmentPulse={
-      ...appointmentPulse,
-      overdue:Math.max(0,Number(counts.appointments||0)),
-      monthly,
-      loaded:true
-    };
+    appointmentPulse.upcoming=null;
   }
 
+  appointmentPulse.loaded=true;
   return appointmentPulse;
 }
 
@@ -1405,6 +1433,57 @@ function pendingDeliveriesForFlow(){
     const name=normalisePersonKey(d?.salesperson_name);
     return (wantedEmail&&email===wantedEmail)||(wantedName&&name===wantedName);
   }).length;
+}
+
+function deliveryDateKey(d){
+  const booked=String(d?.customer_booked_delivery_at||"").slice(0,10);
+  const estimated=String(d?.estimated_delivery_date||"").slice(0,10);
+  return booked||estimated||"";
+}
+
+function selectedPendingDeliveryDeals(){
+  if(!deliveryPulse.loaded)return [];
+
+  const role=String(profile?.role||"").toLowerCase();
+  const pending=(deliveryPulse.deals||[]).filter(d=>Number(d?.status)===2);
+
+  if(role==="user")return pending;
+
+  const selected=flowPerson?.value||"all";
+  if(selected==="all")return pending;
+
+  const person=flowPeople.find(p=>p.key===selected);
+  if(!person)return [];
+
+  const wantedEmail=normalisePersonKey(person.email);
+  const wantedName=normalisePersonKey(person.name);
+
+  return pending.filter(d=>{
+    const email=normalisePersonKey(d?.salesperson_email);
+    const name=normalisePersonKey(d?.salesperson_name);
+    return (wantedEmail&&email===wantedEmail)||(wantedName&&name===wantedName);
+  });
+}
+
+function pendingDeliveryChartData(days){
+  const map=new Map(days.map(d=>[d.key,0]));
+  const pending=selectedPendingDeliveryDeals();
+  let datedInMonth=0;
+
+  pending.forEach(d=>{
+    const key=deliveryDateKey(d);
+    if(map.has(key)){
+      map.set(key,(map.get(key)||0)+1);
+      datedInMonth++;
+    }
+  });
+
+  return {
+    map,
+    total:pending.length,
+    datedInMonth,
+    undatedOrOutside:Math.max(0,pending.length-datedInMonth)
+  };
 }
 
 async function loadRhythmPulse(){try{await loadMonthlyFlow();const m=flowMetrics(flowDeals);const sev=m.level==="good"?0:(m.level==="bad"?(m.dryStreak>=5?4:m.dryStreak>=3?3:2):1);rhythmPulse={loaded:true,level:m.level,severity:sev,title:m.title,metrics:m};return rhythmPulse}catch(e){console.warn("AXIS rhythm pulse:",e);return rhythmPulse}}
