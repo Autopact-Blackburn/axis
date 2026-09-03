@@ -392,6 +392,9 @@ button{cursor:pointer}
 .flow-grid{stroke:rgba(255,255,255,.075);stroke-width:1}
 .flow-today{stroke:rgba(242,184,92,.60);stroke-width:1.5;stroke-dasharray:5 5}
 .flow-bar{fill:rgba(141,107,255,.72)}
+.flow-retail-bar{fill:rgba(141,107,255,.78)}
+.flow-fleet-bar{fill:rgba(242,184,92,.82)}
+.flow-used-bar{fill:rgba(89,196,255,.80)}
 .flow-line{fill:none;stroke:#b59eff;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
 .flow-dot{fill:#f7f4fa;stroke:#8d6bff;stroke-width:2}
 .flow-delivery-bar{fill:rgba(62,218,210,.72)}
@@ -1339,6 +1342,16 @@ function renderFlowChart(metrics){
   if(flowMode==="productive"){renderProductiveDays(metrics);return}
   const {days,signupCounts}=metrics;if(!days.length){flowChartWrap.innerHTML=`<div class="flow-empty">No working-day data available.</div>`;return}
   const deals=flowSelectedDeals(),pendingChart=pendingDeliveryChartData(days),deliveredMap=flowDeliveredChartData(days,deals);
+  const signedMix=days.map(d=>{
+    const mix={retail:0,fleet:0,used:0};
+    deals.filter(x=>!x.cancelled&&x.sign_up_date===d.key).forEach(x=>{
+      const dn=String(x.deal_number||"").trim().toUpperCase();
+      if(dn.startsWith("KF"))mix.fleet++;
+      else if(dn.startsWith("BLU"))mix.used++;
+      else mix.retail++;
+    });
+    return mix;
+  });
   const dailySigned=days.map(d=>signupCounts.get(d.key)||0),dailyDelivered=days.map(d=>deliveredMap.get(d.key)||0),dailyPending=days.map(d=>pendingChart.map.get(d.key)||0);
   const cumulative=arr=>arr.reduce((out,n,i)=>{out.push(n+(out[i-1]||0));return out},[]);
   const signedValues=flowView==="daily"?dailySigned:cumulative(dailySigned),deliveredValues=flowView==="daily"?dailyDelivered:cumulative(dailyDelivered),pendingValues=flowView==="daily"?dailyPending:cumulative(dailyPending);
@@ -1352,14 +1365,19 @@ function renderFlowChart(metrics){
   let marks="";
   if(flowView==="daily"){
     const slot=Math.max(14,plotW/days.length),count=series.length,barW=Math.min(17,slot*(count===1?.48:.23)),offsets=count===1?[0]:count===2?[-barW*.7,barW*.7]:[-barW-3,0,barW+3];
-    series.forEach((name,idx)=>{const values=name==="signed"?signedValues:name==="delivered"?deliveredValues:pendingValues;if(name==="pending"){const base=padT+plotH,pts=[`${x(0)},${base}`,...values.map((v,i)=>`${x(i)},${y(v)}`),`${x(values.length-1)},${base}`].join(" ");marks+=`<polygon class="flow-pending-area" points="${pts}"></polygon>`+lineSeries(values,"flow-pending-line","flow-pending-dot","pending")}else{const cls=name==="signed"?"flow-bar":"flow-delivered-bar",vcls=name==="delivered"?"delivered":"";marks+=values.map((v,i)=>{const top=y(v),h=padT+plotH-top,xx=x(i)+offsets[idx]-barW/2;return `<rect class="${cls}" x="${xx}" y="${top}" width="${barW}" height="${Math.max(v?3:0,h)}" rx="5"></rect>`+(v?`<text class="flow-value ${vcls}" x="${xx+barW/2}" y="${Math.max(18,top-8)}" text-anchor="middle">${v}</text>`:"")}).join("")}});
+    series.forEach((name,idx)=>{const values=name==="signed"?signedValues:name==="delivered"?deliveredValues:pendingValues;if(name==="pending"){const base=padT+plotH,pts=[`${x(0)},${base}`,...values.map((v,i)=>`${x(i)},${y(v)}`),`${x(values.length-1)},${base}`].join(" ");marks+=`<polygon class="flow-pending-area" points="${pts}"></polygon>`+lineSeries(values,"flow-pending-line","flow-pending-dot","pending")}else if(name==="signed"){marks+=values.map((v,i)=>{
+      const xx=x(i)+offsets[idx]-barW/2,m=signedMix[i]||{retail:0,fleet:0,used:0};
+      let acc=0,stack="";
+      [[m.retail,"flow-retail-bar"],[m.fleet,"flow-fleet-bar"],[m.used,"flow-used-bar"]].forEach(([n,cls])=>{if(!n)return;const bottom=y(acc),top=y(acc+n),h=bottom-top;stack+=`<rect class="${cls}" x="${xx}" y="${top}" width="${barW}" height="${Math.max(3,h)}" rx="4"></rect>`;acc+=n});
+      const top=y(v);return stack+(v?`<text class="flow-value" x="${xx+barW/2}" y="${Math.max(18,top-8)}" text-anchor="middle">${v}</text>`:"")
+    }).join("")}else{const cls="flow-delivered-bar",vcls="delivered";marks+=values.map((v,i)=>{const top=y(v),h=padT+plotH-top,xx=x(i)+offsets[idx]-barW/2;return `<rect class="${cls}" x="${xx}" y="${top}" width="${barW}" height="${Math.max(v?3:0,h)}" rx="5"></rect>`+(v?`<text class="flow-value ${vcls}" x="${xx+barW/2}" y="${Math.max(18,top-8)}" text-anchor="middle">${v}</text>`:"")}).join("")}});
   }else{
     if(series.includes("pending")){const base=padT+plotH,pts=[`${x(0)},${base}`,...pendingValues.map((v,i)=>`${x(i)},${y(v)}`),`${x(pendingValues.length-1)},${base}`].join(" ");marks+=`<polygon class="flow-pending-area" points="${pts}"></polygon>`}
     if(series.includes("signed"))marks+=lineSeries(signedValues,"flow-line","flow-dot","");if(series.includes("delivered"))marks+=lineSeries(deliveredValues,"flow-delivered-line","flow-delivered-dot","delivered");if(series.includes("pending"))marks+=lineSeries(pendingValues,"flow-pending-line","flow-pending-dot","pending");
   }
   const labels=days.map((d,i)=>`<text class="flow-axis" transform="translate(${x(i)-2},${height-20}) rotate(-50)" text-anchor="end">${d.day}-${String(flowMonth).slice(5)}</text>`).join("");
   let lx=padL,legendParts=[];const addLegend=(cls,label)=>{legendParts.push(`<rect class="${cls}" x="${lx}" y="18" width="14" height="10" rx="3"></rect><text class="flow-legend-text" x="${lx+22}" y="27">${label}</text>`);lx+=label==="To Be Delivered"?132:104};
-  if(series.includes("signed"))addLegend("flow-bar","Signed");if(series.includes("delivered"))addLegend("flow-delivered-bar","Delivered");if(series.includes("pending"))addLegend("flow-delivery-bar","To Be Delivered");
+  if(series.includes("signed")&&flowView==="daily"){addLegend("flow-retail-bar","Retail");addLegend("flow-fleet-bar","Fleet");addLegend("flow-used-bar","Used")}else if(series.includes("signed"))addLegend("flow-bar","Signed");if(series.includes("delivered"))addLegend("flow-delivered-bar","Delivered");if(series.includes("pending"))addLegend("flow-delivery-bar","To Be Delivered");
   const legend=`<g class="flow-legend">${legendParts.join("")}<text class="flow-legend-total" x="${width-padR}" y="27" text-anchor="end">${series.includes("pending")?`${pendingChart.total} pending${pendingChart.undatedOrOutside?` · ${pendingChart.undatedOrOutside} not plotted here`:""}`:""}</text></g>`;
   flowChartWrap.innerHTML=`<svg class="flow-chart" viewBox="0 0 ${width} ${height}" style="width:${width}px;height:${height}px" role="img" aria-label="Sales Rhythm ${flowModeLabel(flowMode)} ${flowView} chart">${legend}${grid}${todayLine}${marks}${labels}</svg>`;
   if(todayIndex>=0)flowChartWrap.scrollLeft=Math.max(0,x(todayIndex)-flowChartWrap.clientWidth*.55);
