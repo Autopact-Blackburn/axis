@@ -437,6 +437,57 @@ button{cursor:pointer}
 .flow-action-note{margin-top:10px;color:var(--muted);font-size:9px;line-height:1.5}
 @media(max-width:700px){.flow-full-btn{width:100%}.flow-day-strip{grid-template-columns:repeat(3,minmax(0,1fr));padding:10px}}
 
+
+/* AXIS Bulletins — isolated module */
+.tile[data-app="bulletins"],.mobile-tile[data-app="bulletins"]{
+  border-color:rgba(89,196,255,.29)!important;
+  box-shadow:0 20px 60px rgba(89,196,255,.10),inset 4px 0 0 rgba(89,196,255,.68)!important
+}
+.tile[data-app="bulletins"] .icon{border-color:rgba(89,196,255,.43);background:rgba(89,196,255,.10);box-shadow:0 0 28px rgba(89,196,255,.14)}
+.bulletin-new{color:#d7edff!important;background:rgba(89,196,255,.11)!important;border-color:rgba(89,196,255,.28)!important}
+#bulletinsModal{width:min(1320px,calc(100vw - 28px));max-height:calc(100vh - 28px)}
+.bulletin-toolbar{display:flex;gap:10px;align-items:center;margin-top:18px;flex-wrap:wrap}
+.bulletin-toolbar .search{margin-top:0;flex:1;min-width:220px}
+.bulletin-filter{height:48px;min-width:150px;border:1px solid var(--line);border-radius:14px;background:#211a28;color:white;padding:0 12px;outline:none}
+.bulletin-admin-box{margin-top:14px;padding:14px;border:1px solid rgba(181,158,255,.20);border-radius:16px;background:rgba(141,107,255,.045)}
+.bulletin-upload-grid{display:grid;grid-template-columns:1.3fr .7fr .7fr auto;gap:9px;align-items:end}
+.bulletin-upload-grid label{display:block;font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.bulletin-upload-grid input,.bulletin-upload-grid select{width:100%;height:42px;border:1px solid var(--line);border-radius:11px;background:#211a28;color:white;padding:0 10px}
+.bulletin-upload-grid input[type="file"]{padding:9px 10px}
+.bulletin-upload-retain{display:flex;align-items:center;gap:7px;height:42px;font-size:9px;color:#d8d1dd;white-space:nowrap}
+.bulletin-upload-retain input{width:auto;height:auto}
+.bulletin-upload-btn{height:42px;border:1px solid rgba(181,158,255,.28);border-radius:11px;background:rgba(141,107,255,.14);color:white;padding:0 14px;font-size:9px;font-weight:900;letter-spacing:.06em}
+.bulletin-status{min-height:17px;margin-top:8px;font-size:9px;color:var(--muted)}
+.bulletin-layout{display:grid;grid-template-columns:minmax(340px,.78fr) minmax(0,1.22fr);gap:14px;margin-top:16px;min-height:520px}
+.bulletin-list{display:grid;align-content:start;gap:8px;max-height:64vh;overflow:auto;padding-right:2px}
+.bulletin-row{border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.025);padding:13px}
+.bulletin-row.unread{border-color:rgba(89,196,255,.27);background:rgba(89,196,255,.045)}
+.bulletin-row-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.bulletin-row strong{font-size:11px;line-height:1.35;display:block}
+.bulletin-row small{display:block;margin-top:4px;color:var(--muted);font-size:8px;line-height:1.4}
+.bulletin-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+.bulletin-tag{display:inline-flex;align-items:center;min-height:22px;border:1px solid var(--line);border-radius:999px;padding:0 7px;font-size:7px;color:#cfc7d6}
+.bulletin-tag.new{color:#d7edff;border-color:rgba(89,196,255,.28);background:rgba(89,196,255,.08)}
+.bulletin-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.bulletin-actions button{height:30px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.035);color:white;padding:0 9px;font-size:7px;font-weight:850}
+.bulletin-actions button.primary-action{border-color:rgba(89,196,255,.28);background:rgba(89,196,255,.09)}
+.bulletin-actions button.danger{border-color:rgba(255,107,120,.24);background:rgba(255,107,120,.07);color:#ffd6db}
+.bulletin-viewer{border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.018);overflow:hidden;display:flex;flex-direction:column;min-height:520px}
+.bulletin-viewer-head{min-height:58px;padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.bulletin-viewer-head strong{font-size:11px}.bulletin-viewer-head small{display:block;font-size:8px;color:var(--muted);margin-top:3px}
+.bulletin-viewer-frame{border:0;width:100%;flex:1;min-height:460px;background:#2a2730}
+.bulletin-empty{padding:42px 18px;text-align:center;color:var(--muted);font-size:10px;line-height:1.6}
+.bulletin-internal-note{padding:8px 12px;border-top:1px solid var(--line);font-size:7px;color:var(--muted2);text-align:center;letter-spacing:.06em;text-transform:uppercase}
+@media(max-width:820px){
+  #bulletinsModal{inset:8px;left:8px;top:8px;transform:none;width:calc(100vw - 16px);height:calc(100dvh - 16px);max-height:none;border-radius:22px;padding:16px}
+  .bulletin-layout{grid-template-columns:1fr;min-height:0}.bulletin-list{max-height:none}.bulletin-viewer{min-height:70vh}.bulletin-viewer-frame{min-height:62vh}
+  .bulletin-upload-grid{grid-template-columns:1fr 1fr}.bulletin-upload-grid > div:first-child{grid-column:1/-1}.bulletin-upload-btn{width:100%}
+}
+@media(max-width:520px){
+  .bulletin-toolbar{align-items:stretch}.bulletin-toolbar .search,.bulletin-filter{width:100%;min-width:0}
+  .bulletin-upload-grid{grid-template-columns:1fr}.bulletin-upload-grid > div:first-child{grid-column:auto}
+}
+
 .mobile-list{display:none}
 
 @media(max-width:1100px){
@@ -674,6 +725,40 @@ button{cursor:pointer}
   <div class="flow-foot">Working-day sales slots exclude Sundays and Victorian public holidays. Signed = business written. Delivered = completed handovers. To Be Delivered = live Oracle/DMS status 2, plotted by booked delivery date first, then estimated delivery date. Undated pending deals remain in the total but cannot appear on the timeline.</div>
 </section>
 
+
+<section id="bulletinsModal" class="modal hidden">
+  <div class="modal-head">
+    <div><h2>Bulletins</h2><p id="bulletinPeriod">Current internal bulletins · newest first</p></div>
+    <button id="closeBulletins" class="close">×</button>
+  </div>
+  <div class="bulletin-toolbar">
+    <input id="bulletinSearch" class="search" placeholder="Search bulletin title">
+    <select id="bulletinBrandFilter" class="bulletin-filter" aria-label="Filter by brand"><option value="all">All brands</option></select>
+  </div>
+  <div id="bulletinAdminBox" class="bulletin-admin-box hidden">
+    <div class="bulletin-upload-grid">
+      <div><label>PDF files</label><input id="bulletinFiles" type="file" accept="application/pdf,.pdf" multiple></div>
+      <div><label>Brand</label><select id="bulletinUploadBrand"><option>Kia</option><option>Nissan</option><option>GWM</option><option>Other</option></select></div>
+      <div><label>Bulletin date</label><input id="bulletinUploadDate" type="date"></div>
+      <div class="bulletin-upload-retain"><input id="bulletinUploadRetain" type="checkbox"><span>Keep permanently</span></div>
+      <button id="bulletinUploadBtn" class="bulletin-upload-btn" type="button">UPLOAD PDFs</button>
+    </div>
+    <div id="bulletinUploadStatus" class="bulletin-status"></div>
+  </div>
+  <div class="bulletin-layout">
+    <div id="bulletinList" class="bulletin-list"></div>
+    <div id="bulletinViewer" class="bulletin-viewer">
+      <div class="bulletin-viewer-head">
+        <div><strong id="bulletinViewerTitle">Select a bulletin</strong><small id="bulletinViewerMeta">PDF opens inside AXIS</small></div>
+        <button id="closeBulletinViewer" class="close hidden" type="button">×</button>
+      </div>
+      <div id="bulletinViewerEmpty" class="bulletin-empty">Choose a bulletin from the list to view it here.</div>
+      <iframe id="bulletinViewerFrame" class="bulletin-viewer-frame hidden" title="AXIS bulletin viewer"></iframe>
+      <div class="bulletin-internal-note">Internal use only · AXIS</div>
+    </div>
+  </div>
+</section>
+
 <section id="insightsModal" class="modal hidden">
   <div class="modal-head">
     <div><h2>AXIS Insights</h2><p>Usage and adoption reporting</p></div>
@@ -704,6 +789,9 @@ const ORACLE_INSIGHTS_ENDPOINT=SUPABASE_URL+"/functions/v1/oracle-insights";
 const MONTHLY_FLOW_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-monthly-flow";
 const DELIVERY_FEED_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-deliveries";
 const CREATE_USER_ENDPOINT=SUPABASE_URL+"/functions/v1/axis-admin-create-user";
+const BULLETINS_LIST_ENDPOINT=SUPABASE_URL+"/functions/v1/bulletins-list";
+const BULLETIN_VIEW_ENDPOINT=SUPABASE_URL+"/functions/v1/bulletin-view";
+const BULLETINS_ADMIN_ENDPOINT=SUPABASE_URL+"/functions/v1/bulletins-admin";
 const PIN_WINDOW=30*24*60*60*1000, PIN_KEY="axis_pin_authenticated_at";
 
 const client=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
@@ -716,6 +804,7 @@ let appointmentPulse={overdue:0,upcoming:null,target:4,activeSalespeople:0,month
 let rhythmPulse={loaded:false,level:"watch",severity:1,title:"READING RHYTHM",metrics:null};
 let momentumData={score:null,label:"Building",tier:"white"};
 let audioUnlocked=false,lastSeveritySnapshot=null;
+let bulletinState={rows:[],unread:0,canManage:false,loaded:false,error:null};
 
 const apps=[
   {key:"appointments",name:"Appointments",icon:"📅",desc:"Appointment control",url:"https://autopact-blackburn.github.io/Blackburn-Appointment-Tracker/",field:"appointment_access"},
@@ -1441,7 +1530,7 @@ async function openAxis(){
   renderProfile();
   renderAxisScorePlaceholder();
   loadWeather();
-  await Promise.all([refreshCounts(),loadAxisLeague()]);
+  await Promise.all([refreshCounts(),loadAxisLeague(),loadBulletins()]);
   await refreshOperationalPulse();
   renderTiles();
   startTimer();
@@ -1585,6 +1674,11 @@ function renderTiles(){
   const qm=document.createElement("button");qm.className="mobile-tile";qm.dataset.app="qr";qm.innerHTML=`<div class="icon">▦</div><div><strong>My QR</strong><small>Contact card</small></div><div class="badge ok">›</div>`;qm.onclick=openProfile;mob.appendChild(qm);
   setTimeout(()=>buildQr(document.getElementById("qrTilePreview"),240,58),0);
 
+  const bulletinBadge=bulletinState.unread>0?`NEW × ${bulletinState.unread}`:"✓";
+  const bulletinCls=bulletinState.unread>0?"bulletin-new":"ok";
+  const b=document.createElement("button");b.className="tile";b.dataset.app="bulletins";b.innerHTML=`<div class="tile-top"><div class="icon">▤</div><div id="bulletinDesktopBadge" class="badge ${bulletinCls}">${bulletinBadge}</div></div><div><h2>Bulletins</h2><p>Internal product & operational bulletins</p><div class="tile-status-lines"><div id="bulletinDesktopStatus" class="tile-status-line">${bulletinState.unread>0?`${bulletinState.unread} unread bulletin${bulletinState.unread===1?"":"s"}`:"You're up to date"}</div><div class="tile-status-line muted">${bulletinState.rows.length} current · rolling 30 days</div></div></div><div class="tile-bottom"><span>PDF library</span><strong>OPEN</strong></div>`;b.onclick=openBulletins;grid.appendChild(b);
+  const bm=document.createElement("button");bm.className="mobile-tile";bm.dataset.app="bulletins";bm.innerHTML=`<div class="icon">▤</div><div><strong>Bulletins</strong><small id="bulletinMobileStatus">${bulletinState.unread>0?`${bulletinState.unread} unread · ${bulletinState.rows.length} current`:`Up to date · ${bulletinState.rows.length} current`}</small></div><div id="bulletinMobileBadge" class="badge ${bulletinCls}">${bulletinBadge}</div>`;bm.onclick=openBulletins;mob.appendChild(bm);
+
   if(profile.role==="admin"){
     const u=document.createElement("button");u.className="tile admin";u.dataset.app="users";u.innerHTML=tileHtml({key:"users",name:"User Management",icon:"👥",desc:"Staff access, PINs & permissions",action:"MANAGE"});u.onclick=openUsers;grid.appendChild(u);
     const um=document.createElement("button");um.className="mobile-tile";um.dataset.app="users";um.innerHTML=`<div class="icon">👥</div><div><strong>User Management</strong><small>Staff access & PINs</small></div><div class="badge ok">›</div>`;um.onclick=openUsers;mob.appendChild(um);
@@ -1600,7 +1694,7 @@ async function refreshCounts(){
 }
 function startTimer(){
   if(timer)clearInterval(timer);
-  timer=setInterval(async()=>{await refreshCounts();await refreshOperationalPulse()},60000);
+  timer=setInterval(async()=>{await refreshCounts();await loadBulletins();await refreshOperationalPulse()},60000);
   setInterval(loadWeather,45*60*1000);
 }
 function updateSummary(){const total=Math.max(0,Number(appointmentPulse.overdue||0))+Math.max(0,Number(counts.delivery||0));openActions.textContent=total;const worst=Math.max(appointmentSeverity(),deliverySeverity(),rhythmSeverity());summary.textContent=worst>=4?`☠️ Critical actions need attention.`:worst===3?`🌊 Pressure is building across AXIS.`:worst===2?`🔥 There are items that need attention now.`:worst===1?`🌶️ A few things are starting to slip.`:"Your systems are up to date."}
@@ -1653,7 +1747,114 @@ function buildQr(box,renderSize,cssSize){
 }
 
 function openProfile(){overlay.classList.remove("hidden");profileDrawer.classList.remove("hidden")}
-function closeAll(){[profileDrawer,usersModal,editModal,addStaffModal,leagueModal,flowModal,insightsModal].forEach(x=>x.classList.add("hidden"));overlay.classList.add("hidden")}
+function closeAll(){[profileDrawer,usersModal,editModal,addStaffModal,leagueModal,flowModal,bulletinsModal,insightsModal].forEach(x=>x.classList.add("hidden"));overlay.classList.add("hidden");clearBulletinViewer()}
+
+
+function escapeBulletinHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function bulletinDateLabel(v){if(!v)return"—";const d=new Date(String(v).slice(0,10)+"T00:00:00");return Number.isNaN(d.getTime())?String(v):d.toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}
+async function loadBulletins(){
+  try{
+    const token=await liveAxisToken();if(!token)throw new Error("AXIS session expired.");
+    const r=await fetch(BULLETINS_LIST_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:"{}"});
+    let j={};try{j=await r.json()}catch{}
+    if(!r.ok||!j.ok)throw new Error(j.error||"Bulletins unavailable.");
+    bulletinState={rows:Array.isArray(j.bulletins)?j.bulletins:[],unread:Math.max(0,Number(j.unread_count||0)),canManage:j.can_manage===true,loaded:true,error:null};
+  }catch(e){
+    console.warn("AXIS bulletins:",e);
+    bulletinState={...bulletinState,loaded:false,error:e?.message||"Unavailable"};
+  }
+  return bulletinState;
+}
+function updateBulletinTileOnly(){
+  const badgeText=bulletinState.unread>0?`NEW × ${bulletinState.unread}`:"✓",cls=bulletinState.unread>0?"bulletin-new":"ok";
+  const db=document.getElementById("bulletinDesktopBadge"),mb=document.getElementById("bulletinMobileBadge"),ds=document.getElementById("bulletinDesktopStatus"),ms=document.getElementById("bulletinMobileStatus");
+  [db,mb].forEach(el=>{if(el){el.textContent=badgeText;el.classList.remove("ok","warn","bad","bulletin-new");el.classList.add(cls)}});
+  if(ds)ds.textContent=bulletinState.unread>0?`${bulletinState.unread} unread bulletin${bulletinState.unread===1?"":"s"}`:"You're up to date";
+  if(ms)ms.textContent=bulletinState.unread>0?`${bulletinState.unread} unread · ${bulletinState.rows.length} current`:`Up to date · ${bulletinState.rows.length} current`;
+}
+function syncBulletinBrandFilter(){
+  const sel=document.getElementById("bulletinBrandFilter");if(!sel)return;
+  const current=sel.value||"all",brands=[...new Set(bulletinState.rows.map(x=>String(x.brand||"Other").trim()||"Other"))].sort((a,b)=>a.localeCompare(b));
+  sel.innerHTML=`<option value="all">All brands</option>`+brands.map(x=>`<option value="${escapeBulletinHtml(x)}">${escapeBulletinHtml(x)}</option>`).join("");
+  sel.value=brands.includes(current)?current:"all";
+}
+function renderBulletinList(){
+  const list=document.getElementById("bulletinList");if(!list)return;
+  syncBulletinBrandFilter();
+  const q=String(document.getElementById("bulletinSearch")?.value||"").trim().toLowerCase(),brand=document.getElementById("bulletinBrandFilter")?.value||"all";
+  const rows=bulletinState.rows.filter(x=>(brand==="all"||String(x.brand||"Other")===brand)&&(!q||String(x.title||"").toLowerCase().includes(q)||String(x.file_name||"").toLowerCase().includes(q)));
+  if(!bulletinState.loaded&&bulletinState.error){list.innerHTML=`<div class="bulletin-empty">${escapeBulletinHtml(bulletinState.error)}</div>`;return}
+  if(!rows.length){list.innerHTML=`<div class="bulletin-empty">No current bulletins match this view.</div>`;return}
+  list.innerHTML=rows.map(x=>{
+    const manage=bulletinState.canManage?`<button type="button" onclick="editBulletinMeta('${x.id}')">EDIT</button><button type="button" onclick="toggleBulletinRetain('${x.id}')">${x.retain_permanently?"30 DAYS":"RETAIN"}</button><button type="button" class="danger" onclick="deleteBulletin('${x.id}')">DELETE</button>`:"";
+    return `<div class="bulletin-row ${x.is_read?"":"unread"}"><div class="bulletin-row-head"><div><strong>${escapeBulletinHtml(x.title)}</strong><small>${escapeBulletinHtml(x.file_name||"PDF")}</small></div>${x.is_read?"":`<span class="bulletin-tag new">NEW</span>`}</div><div class="bulletin-tags"><span class="bulletin-tag">${escapeBulletinHtml(x.brand||"Other")}</span><span class="bulletin-tag">${bulletinDateLabel(x.bulletin_date)}</span>${x.retain_permanently?`<span class="bulletin-tag">RETAINED</span>`:""}</div><div class="bulletin-actions"><button type="button" class="primary-action" onclick="openBulletin('${x.id}')">OPEN PDF</button>${manage}</div></div>`;
+  }).join("");
+}
+function clearBulletinViewer(){
+  const frame=document.getElementById("bulletinViewerFrame"),empty=document.getElementById("bulletinViewerEmpty"),close=document.getElementById("closeBulletinViewer"),title=document.getElementById("bulletinViewerTitle"),meta=document.getElementById("bulletinViewerMeta");
+  if(frame){frame.src="about:blank";frame.classList.add("hidden")}if(empty)empty.classList.remove("hidden");if(close)close.classList.add("hidden");if(title)title.textContent="Select a bulletin";if(meta)meta.textContent="PDF opens inside AXIS";
+}
+async function openBulletins(){
+  overlay.classList.remove("hidden");bulletinsModal.classList.remove("hidden");
+  document.getElementById("bulletinAdminBox")?.classList.toggle("hidden",!["manager","admin"].includes(String(profile?.role||"").toLowerCase()));
+  const dateInput=document.getElementById("bulletinUploadDate");if(dateInput&&!dateInput.value)dateInput.value=melbourneTodayKey();
+  await loadBulletins();updateBulletinTileOnly();renderBulletinList();
+}
+async function openBulletin(id){
+  try{
+    const row=bulletinState.rows.find(x=>String(x.id)===String(id));if(!row)return;
+    const token=await liveAxisToken();if(!token)throw new Error("AXIS session expired.");
+    const r=await fetch(BULLETIN_VIEW_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify({bulletin_id:id})});
+    let j={};try{j=await r.json()}catch{}
+    if(!r.ok||!j.ok||!j.view_url)throw new Error(j.error||"Unable to open bulletin.");
+    if(!row.is_read){row.is_read=true;row.first_viewed_at=j.viewed_at||new Date().toISOString();bulletinState.unread=Math.max(0,bulletinState.unread-1)}
+    row.last_viewed_at=j.viewed_at||new Date().toISOString();updateBulletinTileOnly();renderBulletinList();
+    const frame=document.getElementById("bulletinViewerFrame"),empty=document.getElementById("bulletinViewerEmpty"),close=document.getElementById("closeBulletinViewer");
+    document.getElementById("bulletinViewerTitle").textContent=row.title||"Bulletin";
+    document.getElementById("bulletinViewerMeta").textContent=`${row.brand||"Other"} · ${bulletinDateLabel(row.bulletin_date)}`;
+    empty.classList.add("hidden");frame.classList.remove("hidden");close.classList.remove("hidden");frame.src=String(j.view_url)+"#toolbar=0&navpanes=0";
+  }catch(e){alert(e?.message||"Unable to open bulletin.")}
+}
+async function bulletinAdminJson(payload){
+  const token=await liveAxisToken();if(!token)throw new Error("AXIS session expired.");
+  const r=await fetch(BULLETINS_ADMIN_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},body:JSON.stringify(payload)});
+  let j={};try{j=await r.json()}catch{}if(!r.ok||!j.ok)throw new Error(j.error||"Bulletin action failed.");return j;
+}
+async function uploadBulletins(){
+  const files=[...(document.getElementById("bulletinFiles")?.files||[])],status=document.getElementById("bulletinUploadStatus"),btn=document.getElementById("bulletinUploadBtn");
+  if(!files.length){status.textContent="Choose one or more PDF files first.";return}
+  btn.disabled=true;
+  try{
+    const token=await liveAxisToken();if(!token)throw new Error("AXIS session expired.");
+    const brand=document.getElementById("bulletinUploadBrand").value||"Other",date=document.getElementById("bulletinUploadDate").value||melbourneTodayKey(),retain=document.getElementById("bulletinUploadRetain").checked;
+    let done=0;
+    for(const file of files){
+      status.textContent=`Uploading ${done+1} of ${files.length} · ${file.name}`;
+      const form=new FormData();form.append("file",file);form.append("brand",brand);form.append("bulletin_date",date);form.append("retain_permanently",retain?"true":"false");
+      const r=await fetch(BULLETINS_ADMIN_ENDPOINT,{method:"POST",headers:{"Authorization":"Bearer "+token},body:form});let j={};try{j=await r.json()}catch{}
+      if(!r.ok||!j.ok)throw new Error(j.error||`Unable to upload ${file.name}.`);done++;
+    }
+    status.textContent=`Uploaded ${done} PDF${done===1?"":"s"}.`;document.getElementById("bulletinFiles").value="";
+    await loadBulletins();updateBulletinTileOnly();renderBulletinList();
+  }catch(e){status.textContent=e?.message||"Upload failed."}finally{btn.disabled=false}
+}
+async function toggleBulletinRetain(id){
+  const row=bulletinState.rows.find(x=>String(x.id)===String(id));if(!row)return;
+  try{await bulletinAdminJson({action:"update",bulletin_id:id,retain_permanently:!row.retain_permanently});await loadBulletins();updateBulletinTileOnly();renderBulletinList()}catch(e){alert(e?.message||"Unable to update bulletin.")}
+}
+async function editBulletinMeta(id){
+  const row=bulletinState.rows.find(x=>String(x.id)===String(id));if(!row)return;
+  const title=prompt("Bulletin title:",row.title||"");if(title===null)return;
+  const brand=prompt("Brand:",row.brand||"Other");if(brand===null)return;
+  const date=prompt("Bulletin date (YYYY-MM-DD):",String(row.bulletin_date||"").slice(0,10));if(date===null)return;
+  if(!title.trim()||!/^\d{4}-\d{2}-\d{2}$/.test(date.trim()))return alert("Enter a title and date in YYYY-MM-DD format.");
+  try{await bulletinAdminJson({action:"update",bulletin_id:id,title:title.trim(),brand:brand.trim()||"Other",bulletin_date:date.trim()});await loadBulletins();updateBulletinTileOnly();renderBulletinList()}catch(e){alert(e?.message||"Unable to edit bulletin.")}
+}
+async function deleteBulletin(id){
+  const row=bulletinState.rows.find(x=>String(x.id)===String(id));if(!row)return;
+  if(!confirm(`Delete "${row.title}"? This removes the PDF from AXIS.`))return;
+  try{await bulletinAdminJson({action:"delete",bulletin_id:id});clearBulletinViewer();await loadBulletins();updateBulletinTileOnly();renderBulletinList()}catch(e){alert(e?.message||"Unable to delete bulletin.")}
+}
 
 async function adminCall(payload){
   const {data}=await client.auth.getSession();const token=data.session?.access_token;if(!token)throw new Error("AXIS session expired.");
@@ -1884,6 +2085,7 @@ profileBtn.onclick=openProfile;closeProfile.onclick=closeAll;overlay.onclick=clo
 closeUsers.onclick=closeAll;addStaffBtn.onclick=openAddStaff;closeAddStaff.onclick=closeAddStaffModal;createStaffBtn.onclick=createStaff;document.querySelectorAll(".add-access").forEach(b=>b.onclick=()=>b.classList.toggle("on"));staffSearch.oninput=e=>{const q=e.target.value.toLowerCase();renderStaff(staff.filter(p=>[p.first_name,p.last_name,p.email,p.position,p.department,p.role].some(v=>(v||"").toLowerCase().includes(q))))};
 closeEdit.onclick=()=>{editModal.classList.add("hidden");usersModal.classList.remove("hidden")};saveUser.onclick=saveEditing;resetPin.onclick=resetEditingPin;toggleActive.onclick=toggleEditingActive;
 closeInsights.onclick=closeAll;closeLeague.onclick=closeAll;closeFlow.onclick=closeAll;
+closeBulletins.onclick=closeAll;closeBulletinViewer.onclick=clearBulletinViewer;bulletinSearch.oninput=renderBulletinList;bulletinBrandFilter.onchange=renderBulletinList;bulletinUploadBtn.onclick=uploadBulletins;bulletinViewer.oncontextmenu=e=>e.preventDefault();
 flowPerson.onchange=renderMonthlyFlow;
 flowFullBtn.onclick=()=>{flowMode="full";renderMonthlyFlow()};
 flowDailyBtn.onclick=()=>{flowView="daily";renderMonthlyFlow()};
